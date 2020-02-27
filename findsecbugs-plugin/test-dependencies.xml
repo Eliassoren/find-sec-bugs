@@ -13,6 +13,9 @@
         <scope>test</scope>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/com.nimbusds/oauth2-oidc-sdk -->
+
+
     <dependency>
         <groupId>javax.xml</groupId>
         <artifactId>jaxws-api</artifactId>
