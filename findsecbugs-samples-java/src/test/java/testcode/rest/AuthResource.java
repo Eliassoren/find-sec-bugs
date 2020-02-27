@@ -60,7 +60,7 @@ public class AuthResource {
     public Response refresh(@Context HttpHeaders headers, Map<String, String> body) {
         try {
             if(!body.containsKey("refreshToken")) {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
+                return Response.status(Response.Status.UNAUTHORIZED).entity("Refreshtoken was not found").build();
             }
             AuthorizationGrant refreshTokenGrant = new RefreshTokenGrant(new RefreshToken(body.get("refreshToken")));
             HTTPResponse httpResponse = getHttpResponse(refreshTokenGrant, getUserType(body));
