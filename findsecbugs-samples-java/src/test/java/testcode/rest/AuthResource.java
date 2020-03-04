@@ -44,14 +44,17 @@ public class AuthResource {
                     new ResourceOwnerPasswordCredentialsGrant(username, password);
 
             HTTPResponse httpResponse = getHttpResponse(passwordGrant, getUserType(body));
-            password.erase();
+            password.erase(); // FIXME bug; insecure practice. Should be in finally block. Bad control flow.
             handleErrorResponses(httpResponse);
 
             OIDCTokenResponse response = OIDCTokenResponse.parse(httpResponse);
 
             return getResponse(response);
         } catch (Exception e) {
-            throw new WebApplicationException("Error getting access token", e);
+            if(e instanceof ParseException) {
+                throw new WebApplicationException("Error while parsing access token", e);
+            }
+            throw new WebApplicationException("Error getting access token", e); // FIXME bug: bad practice, should maybe give valid response
         }
     }
 
@@ -91,9 +94,11 @@ public class AuthResource {
     private HTTPResponse getHttpResponse(AuthorizationGrant passwordGrant, UserType userType) throws URISyntaxException, IOException {
         ClientAuthentication clientAuth = getClientAuthentication(userType);
 
-        Scope scope = new Scope("profile", "openid");
+        Scope scope = new Scope("profile", "openidconnect");
 
-        URI tokenEndpoint = new URI("https://organization.com/api/config");
+        String endpoint = userType == UserType.ADMIN ? "https://organization.com/api/admintoken":
+                                                        "https://organization.com/api/token"; // USER
+        URI tokenEndpoint = new URI(endpoint);
 
         TokenRequest request =
                 new TokenRequest(
@@ -112,7 +117,7 @@ public class AuthResource {
     }
 
     public enum UserType {
-        CUSTOMER,
+        USER,
         ADMIN
     }
 
@@ -131,7 +136,7 @@ public class AuthResource {
     }
 
     private ClientAuthentication getClientAuthentication(UserType userType) {
-        if(userType == UserType.CUSTOMER) {
+        if(userType == UserType.USER) {
             ClientID clientID = new ClientID(1);
             Secret clientSecret = new Secret(1);
             return new ClientSecretBasic(clientID, clientSecret);
@@ -147,7 +152,7 @@ public class AuthResource {
             JSONObject responseBody = httpResponse.getContentAsJSONObject();
             String errorDescription = (String)responseBody.get("error_description");
             int statusCode = httpResponse.getStatusCode();
-            if(statusCode == 401 || statusCode == 403 // clientid, clientsecret
+            if(statusCode == 401 || statusCode == 403 // FIXME bug: blacklist approach
             || statusCode == 400 && "invalid_grant".equals(responseBody.get("error"))) {
                 throw new NotAuthorizedException(
                         statusCode,
@@ -160,7 +165,7 @@ public class AuthResource {
     private UserType getUserType(Map<String, String> body) {
         String userType = body.get("user_type");
         if (userType == null || userType.equals("customer")) {
-            return UserType.CUSTOMER;
+            return UserType.USER;
         } else if (userType.equals("admin")) {
             return UserType.ADMIN;
         } else {
