@@ -18,7 +18,7 @@ public class PermissionService {
         permissionsCache = CacheBuilder.newBuilder()
                 .maximumSize(maxCacheSize)
                 .expireAfterAccess(expireTime)
-                .build(CacheLoader.from(permissionDB::permissionsForUser));
+                .build(CacheLoader.    from(permissionDB::permissionsForUser));
     }
 
     public List<SecurityContext.Permission> permissionsForUser(String username) {

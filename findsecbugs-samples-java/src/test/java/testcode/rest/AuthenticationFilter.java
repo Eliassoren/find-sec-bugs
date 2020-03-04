@@ -42,7 +42,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext) {
-        if(authEnabled) { // config.authEnabled()
+        if(!authEnabled) { // config.authEnabled() TODO: dobbelsjekk original
             requestContext.setSecurityContext(SecurityContext.unauthenticated());
             return;
         }

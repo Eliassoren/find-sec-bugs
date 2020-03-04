@@ -49,39 +49,39 @@ public class SecurityContext implements javax.ws.rs.core.SecurityContext {
     }
 
     /**
-     * @param resource - DataResource
-     * @return true if {@code DataResource} is not sensitive or user has permissions for the type.
+     * @param dataResource - DataResource
+     * @return true if {@code DataResource} is not sensitive or user has permissions for the resource.
      */
-    public boolean hasAccessToDataResource(DataResource resource) {
-        return !resource.isSensitive() || havePermission(resource);
+    public boolean hasAccessToDataResource(DataResource dataResource) {
+        return !dataResource.isSensitive() || hasPermission(dataResource);
     }
 
     /**
-     * @param type - DataResource
+     * @param dataResource - DataResource
 \     * @param items - check access for these items
-     * @return true if {@code DataResource} is not sensitive or user has permissions for the type in one of the given municipalities and one of the given road categories.
+     * @return true if {@code DataResource} is not sensitive or user has permissions for the resource in one of the given municipalities and one of the given road categories.
      */
-    public boolean hasAccessToDataResource(DataResource type, List<String> items) {
+    public boolean hasAccessToDataResource(DataResource dataResource, List<String> items) {
         return permissions.stream()
-                .anyMatch(p -> p.dataResourceId == type.getId()
+                .anyMatch(p -> p.dataResourceId == dataResource.getId()
                             && items.stream().anyMatch(str -> str.equals(p.itemCategory)));
     }
 
-    public boolean havePermission(DataResource type) {
+    public boolean hasPermission(DataResource resource) {
         return permissions.stream()
-                .anyMatch(p -> p.dataResourceId == type.getId());
+                .anyMatch(p -> p.dataResourceId == resource.getId());
     }
 
 
-    public List<String> permittedItems(DataResource DataResource) {
+    public List<String> permittedItems(DataResource dataResource) {
         return permissions.stream()
-                .filter(p -> p.dataResourceId == DataResource.getId())
+                .filter(p -> p.dataResourceId == dataResource.getId())
                 .map(p -> p.itemCategory)
                 .collect(toList());
     }
 
     public boolean hasSensitiveLevel(int sensitiveLevel) {
-        return this.roles.contains("role=0_sensitive" + sensitiveLevel);
+        return this.roles.contains("role=0_role_sensitive" + sensitiveLevel);
     }
 
     public static class Permission {
