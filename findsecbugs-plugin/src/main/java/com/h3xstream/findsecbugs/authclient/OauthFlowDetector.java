@@ -21,8 +21,9 @@ public class OauthFlowDetector implements Detector {
 
         Method[] methods = javaClass.getMethods();
 
-        boolean invokeRandomNumber = false;
         for(Method m : methods) {
+            boolean invokeRandomNumber = false;
+
             MethodGen methodGen = classContext.getMethodGen(m);
 
             ConstantPoolGen cpg = classContext.getConstantPoolGen();
