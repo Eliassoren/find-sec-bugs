@@ -1,4 +1,4 @@
-package testcode.rest;
+package testcode.authclient;
 
 import com.nimbusds.oauth2.sdk.*;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;

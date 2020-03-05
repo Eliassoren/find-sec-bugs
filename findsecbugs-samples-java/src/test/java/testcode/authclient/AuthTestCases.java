@@ -1,26 +1,38 @@
-package testcode.rest;
+package testcode.authclient;
 
 import com.nimbusds.oauth2.sdk.auth.Secret;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
+
 public class AuthTestCases {
+
+    static SecureRandom secureRandomGenerator;
+
+    static {
+        try {
+            secureRandomGenerator = SecureRandom.getInstance("SHA1PRNG", "SUN");
+        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+            e.printStackTrace();
+        }
+    }
+
+
     public static int easy1() {
         return 42;
     }
 
-    public static double detectMathRandom() {
-        return Math.random();
-    }
-
     public static void passwordPossiblyNotErased() {
         Secret password = new Secret("foo");
-        if (randomChoice()) {
+        if (randomCase()) {
             return;
         }
         password.erase();
     }
 
-    private static boolean randomChoice() {
-        return Math.random() > 0.5;
+    private static boolean randomCase() {
+        return secureRandomGenerator.nextInt() > 0.5;
     }
 
     public static void passwordPossiblyNotErasedBecauseOfException() {
@@ -55,14 +67,14 @@ public class AuthTestCases {
     }
 
     public static void notStrongEnoughtStatusCodeChecking() {
-        int statusCode = createRandomStatusCode();
+        int statusCode = createStatusCode();
         if (statusCode == 401 || statusCode == 402) {
             throw new RuntimeException();
         }
 
     }
 
-    private static int createRandomStatusCode() {
-        return (int) (4242 * Math.random());
+    private static int createStatusCode() {
+        return (405)*secureRandomGenerator.nextInt();
     }
 }

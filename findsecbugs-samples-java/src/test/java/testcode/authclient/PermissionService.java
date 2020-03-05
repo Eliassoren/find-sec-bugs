@@ -1,4 +1,4 @@
-package testcode.rest;
+package testcode.authclient;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;

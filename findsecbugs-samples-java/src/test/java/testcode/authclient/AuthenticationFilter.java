@@ -1,4 +1,4 @@
-package testcode.rest;
+package testcode.authclient;
 
 
 import com.nimbusds.jose.JWSAlgorithm;
