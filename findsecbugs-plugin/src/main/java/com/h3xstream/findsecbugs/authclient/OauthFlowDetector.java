@@ -30,8 +30,8 @@ public class OauthFlowDetector implements Detector {
             if (methodGen == null || methodGen.getInstructionList() == null) {
                 continue; //No instruction .. nothing to do
             }
-            for (Iterator<InstructionHandle> itIns = methodGen.getInstructionList().iterator(); itIns.hasNext(); ) {
-                Instruction inst = itIns.next().getInstruction();
+            for (InstructionHandle instructionHandle : methodGen.getInstructionList()) {
+                Instruction inst = instructionHandle.getInstruction();
                 if (inst instanceof INVOKEVIRTUAL) {
                     INVOKEVIRTUAL invokevirtual = (INVOKEVIRTUAL) inst;
                     if ("SecureRandom".equals(invokevirtual.getClassName(cpg)) && "nextInt".equals(invokevirtual.getMethodName(cpg))) {

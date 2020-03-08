@@ -6309,4 +6309,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECOPFP">Overly permissive file permission</BugCode>
 
+    <Detector class="com.h3xstream.findsecbugs.authclient.OauthFlowDetector">
+        <Details>TEST: Found use of random numbers.</Details>
+    </Detector>
 </MessageCollection>
