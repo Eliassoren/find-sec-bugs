@@ -6309,7 +6309,75 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECOPFP">Overly permissive file permission</BugCode>
 
-    <Detector class="com.h3xstream.findsecbugs.authclient.OauthFlowDetector">
-        <Details>TEST: Found use of random numbers.</Details>
+    <Detector class="com.h3xstream.findsecbugs.authclient.InsecureDeletionOfSecretDetector">
+        <Details>Looking for unsafe flows for Oauth usage of secrets and blacklists</Details>
     </Detector>
+    <BugPattern type="UNSAFE_DELETE_SECRET_AUTH">
+        <ShortDescription>Deletion of secrets may fail given a certain control flow.</ShortDescription>
+        <LongDescription>In order to fix this, make sure any path ends with deletion of secret....
+            <![CDATA[
+            <pre>
+                public static void OK_passwordPossiblyNotErased() {
+            Secret password = new Secret("foo");
+            if (randomCase()) {
+                password.erase();
+                // Other operations
+                return;
+            }
+            else if(StringUtils.isBlank(password.getValue())) { // Usage of variable
+                password.erase();
+                // Other operations
+                return;
+            }
+            password.erase();
+    }
+            </pre>
+            ]]>
+        </LongDescription>
+        <Details>Test</Details>
+    </BugPattern>
+    <BugPattern type="UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH">
+        <ShortDescription>Deletion of secrets may fail given a certain exceptional control flow.</ShortDescription>
+        <LongDescription>In order to fix this, make sure any path ends with deletion of secret in a finally block....
+            <![CDATA[
+            <pre>
+                public static void OK_passwordPossiblyNotErasedBecauseOfException_1() {
+        Secret password = new Secret("foo");
+        try {
+            randomlyThrowException();
+        } finally {
+            password.erase();
+        }
+    }
+
+    public static void OK_passwordPossiblyNotErasedBecauseOfException_2() {
+        Secret password = null;
+        try {
+            password = new Secret("foo");
+            randomlyThrowException();
+        } finally {
+            if(password != null) {
+                password.erase();
+            }
+        }
+    }
+            </pre>
+            ]]>
+        </LongDescription>
+        <Details>Test</Details>
+    </BugPattern>
+
+    <Detector class="com.h3xstream.findsecbugs.authclient.SecureRandomTestDetector">
+        <Details>(Remove this) Test class for detecting simple usage of secure random</Details>
+    </Detector>
+
+    <BugPattern type="TEST_USING_SECURE_RANDOM">
+        <ShortDescription>Testing secure random number usage</ShortDescription>
+        <LongDescription>TESTEST</LongDescription>
+        <Details>Test</Details>
+    </BugPattern>
+
+
+
+
 </MessageCollection>
