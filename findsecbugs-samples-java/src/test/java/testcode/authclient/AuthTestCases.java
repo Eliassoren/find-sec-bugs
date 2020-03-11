@@ -50,13 +50,6 @@ public class AuthTestCases {
         return secureRandomGenerator.nextInt() > 0.5;
     }
 
-    public static void passwordPossiblyNotErasedBecauseOfException() {
-        Secret password = new Secret("foo");
-        if(StringUtils.isBlank(password.getValue()))
-            return;
-        randomlyThrowException();
-        password.erase();
-    }
 
     public static void OK_passwordPossiblyNotErasedBecauseOfException_1() {
         Secret password = new Secret("foo");
@@ -64,6 +57,16 @@ public class AuthTestCases {
             randomlyThrowException();
         } finally {
             password.erase();
+        }
+    }
+
+    public static void passwordPossiblyNotErasedBecauseOfCheckedException() {
+        try {
+            Secret password = new Secret("foo");
+            randomlyThrowExceptionCheck();
+            password.erase();
+        } catch (Exception e){
+            throw new RuntimeException(e);
         }
     }
 
@@ -81,6 +84,10 @@ public class AuthTestCases {
 
     private static void randomlyThrowException() {
         throw new RuntimeException();
+    }
+
+    private static void randomlyThrowExceptionCheck() throws Exception {
+        int a = 2*5;
     }
 
     public static void notStrongEnoughtStatusCodeChecking() {

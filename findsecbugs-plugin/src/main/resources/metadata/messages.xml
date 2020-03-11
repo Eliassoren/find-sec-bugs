@@ -6336,36 +6336,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
         </LongDescription>
         <Details>Test</Details>
     </BugPattern>
-    <BugPattern type="UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH">
-        <ShortDescription>Deletion of secrets may fail given a certain exceptional control flow.</ShortDescription>
-        <LongDescription>In order to fix this, make sure any path ends with deletion of secret in a finally block....
-            <![CDATA[
-            <pre>
-                public static void OK_passwordPossiblyNotErasedBecauseOfException_1() {
-        Secret password = new Secret("foo");
-        try {
-            randomlyThrowException();
-        } finally {
-            password.erase();
-        }
-    }
 
-    public static void OK_passwordPossiblyNotErasedBecauseOfException_2() {
-        Secret password = null;
-        try {
-            password = new Secret("foo");
-            randomlyThrowException();
-        } finally {
-            if(password != null) {
-                password.erase();
-            }
-        }
-    }
-            </pre>
-            ]]>
-        </LongDescription>
-        <Details>Test</Details>
-    </BugPattern>
 
     <Detector class="com.h3xstream.findsecbugs.authclient.SecureRandomTestDetector">
         <Details>(Remove this) Test class for detecting simple usage of secure random</Details>
