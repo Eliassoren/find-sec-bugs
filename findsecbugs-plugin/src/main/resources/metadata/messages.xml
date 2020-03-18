@@ -6314,7 +6314,8 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </Detector>
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH">
         <ShortDescription>Deletion of secrets may fail given a certain control flow.</ShortDescription>
-        <LongDescription>In order to fix this, make sure any path ends with deletion of secret....
+        <LongDescription>In order to fix this, make sure any path ends with deletion of secret.... </LongDescription>
+        <Details>
             <![CDATA[
             <pre>
                 public static void OK_passwordPossiblyNotErased() {
@@ -6333,8 +6334,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     }
             </pre>
             ]]>
-        </LongDescription>
-        <Details>Test</Details>
+        </Details>
     </BugPattern>
 
 
