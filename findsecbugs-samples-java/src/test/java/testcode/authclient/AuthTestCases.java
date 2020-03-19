@@ -55,6 +55,9 @@ public class AuthTestCases {
         Secret password = new Secret("foo");
         try {
             randomlyThrowException();
+            throw new NullPointerException("EE");
+        } catch (NullPointerException e) {
+            e.printStackTrace();
         } finally {
             password.erase();
         }

@@ -6309,7 +6309,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECOPFP">Overly permissive file permission</BugCode>
 
-    <Detector class="com.h3xstream.findsecbugs.authclient.InsecureDeletionOfSecretDetector">
+    <Detector class="com.h3xstream.findsecbugs.authclient.InsecureDeleteSecretDetector">
         <Details>Looking for unsafe flows for Oauth usage of secrets and blacklists</Details>
     </Detector>
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH">
@@ -6336,6 +6336,8 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
             ]]>
         </Details>
     </BugPattern>
+    <BugCode abbrev="SECUDOS">Unsafe delete of secret.</BugCode>
+
 
 
     <Detector class="com.h3xstream.findsecbugs.authclient.SecureRandomTestDetector">

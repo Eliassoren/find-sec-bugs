@@ -52,7 +52,7 @@ public class AuthTestCasesTest extends BaseDetectorTest {
     }
 
     @Test
-    public void unsafeDeletionOfSecretTest() throws Exception {
+    public void unsafeDeleteSecretTest() throws Exception {
         //Locate test code
         String[] files = {
                 getClassFilePath("testcode/authclient/AuthTestCases")

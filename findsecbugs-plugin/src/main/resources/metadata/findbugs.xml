@@ -132,7 +132,7 @@
     <Detector class="com.h3xstream.findsecbugs.file.OverlyPermissiveFilePermissionDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
     <Detector class="com.h3xstream.findsecbugs.file.SuspiciousCommandDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
     <Detector class="com.h3xstream.findsecbugs.authclient.SecureRandomTestDetector" reports="TEST_USING_SECURE_RANDOM"/>
-    <Detector class="com.h3xstream.findsecbugs.authclient.InsecureDeletionOfSecretDetector"
+    <Detector class="com.h3xstream.findsecbugs.authclient.InsecureDeleteSecretDetector"
               reports="UNSAFE_DELETE_SECRET_AUTH"/>
     <BugPattern type="HTTP_PARAMETER_POLLUTION" abbrev="SECHPP" category="SECURITY"/>
     <BugPattern type="SMTP_HEADER_INJECTION" abbrev="SECSMTP" category="SECURITY"/>
