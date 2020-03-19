@@ -44,6 +44,7 @@ class SecretValueFrame extends ResourceValueFrame {
 
 public class InsecureDeleteSecretDetector extends ResourceTrackingDetector<Secret, InsecureDeleteSecretDetector.SecretResourceTracker> {
 
+
     private static final boolean DEBUG = SystemProperties.getBoolean("ful.debug");
 
     private int numAcquires = 0;
@@ -133,7 +134,6 @@ public class InsecureDeleteSecretDetector extends ResourceTrackingDetector<Secre
                     if (DEBUG) {
                         System.out.println("Saw lock value!");
                     }
-                    // TODO: this must be set correctly
                     frame.setValue(i, ResourceValue.instance());
                 }
             }
@@ -303,6 +303,7 @@ public class InsecureDeleteSecretDetector extends ResourceTrackingDetector<Secre
         public boolean ignoreExceptionEdge(Edge edge, Secret resource, ConstantPoolGen cpg) {
             return false;
            /* try {
+           // TODO: handle this feature properly
                 Location location = cfg.getExceptionThrowerLocation(edge);
                 if (DEBUG) {
                     System.out.println("Exception thrower location: " + location);
@@ -494,16 +495,16 @@ public class InsecureDeleteSecretDetector extends ResourceTrackingDetector<Secre
         }
         int exitStatus = exitFrame.getStatus();
 
-        if (exitStatus == ResourceValueFrame.OPEN /*|| exitStatus == ResourceValueFrame.OPEN_ON_EXCEPTION_PATH*/) {
+        if (exitStatus == ResourceValueFrame.OPEN || exitStatus == ResourceValueFrame.OPEN_ON_EXCEPTION_PATH) {
             String bugType;
             int priority;
-            // if (exitStatus == ResourceValueFrame.OPEN) {
+            if (exitStatus == ResourceValueFrame.OPEN) {
             bugType = UNSAFE_DELETE_SECRET_AUTH;
             priority = NORMAL_PRIORITY;
-            //}// else {
-            //     bugType = UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH;
-            //   priority = NORMAL_PRIORITY;
-            // }
+            } else {
+                 bugType = UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH;
+                 priority = NORMAL_PRIORITY;
+             }
             String sourceFile = javaClass.getSourceFileName();
             Location location = resource.getLocation();
             InstructionHandle handle = location.getHandle();

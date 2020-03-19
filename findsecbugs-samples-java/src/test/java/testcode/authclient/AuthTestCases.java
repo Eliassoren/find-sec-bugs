@@ -51,27 +51,40 @@ public class AuthTestCases {
     }
 
 
-    public static void OK_passwordPossiblyNotErasedBecauseOfException_1() {
+    public static void OK_passwordPossiblyNotErasedBecauseOfCheckedException_1() {
         Secret password = new Secret("foo");
         try {
-            randomlyThrowException();
-            throw new NullPointerException("EE");
-        } catch (NullPointerException e) {
-            e.printStackTrace();
+            randomlyThrowCheckedException();
+            //throw new NullPointerException("EE");
+        } catch (Exception e) {
+            // log error
         } finally {
             password.erase();
         }
     }
 
+
     public static void passwordPossiblyNotErasedBecauseOfCheckedException() {
         try {
             Secret password = new Secret("foo");
-            randomlyThrowExceptionCheck();
+            randomlyThrowCheckedException();
             password.erase();
         } catch (Exception e){
             throw new RuntimeException(e);
         }
     }
+
+    public static void OK_passwordPossiblyNotErasedBecauseOfException_1() {
+        Secret password = new Secret("foo");
+        try {
+            randomlyThrowException();
+        } catch (Exception e) {
+            // log errors
+        } finally {
+            password.erase();
+        }
+    }
+
 
     public static void OK_passwordPossiblyNotErasedBecauseOfException_2() {
         Secret password = null;
@@ -89,7 +102,7 @@ public class AuthTestCases {
         throw new RuntimeException();
     }
 
-    private static void randomlyThrowExceptionCheck() throws Exception {
+    private static void randomlyThrowCheckedException() throws Exception {
         int a = 2*5;
     }
 

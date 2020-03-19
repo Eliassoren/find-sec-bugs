@@ -6338,7 +6338,18 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECUDOS">Unsafe delete of secret.</BugCode>
 
-
+    <BugPattern type="UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH">
+        <ShortDescription>Deletion of secrets may fail given a certain control flow in an exception path.</ShortDescription>
+        <LongDescription>In order to fix this, make sure any exception path ends with deletion of secret.... </LongDescription>
+        <Details>
+            <![CDATA[
+            <pre>
+               public static void OK_notCloseBecauseException()
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECUDOSE">Unsafe delete of secret.</BugCode>
 
     <Detector class="com.h3xstream.findsecbugs.authclient.SecureRandomTestDetector">
         <Details>(Remove this) Test class for detecting simple usage of secure random</Details>
