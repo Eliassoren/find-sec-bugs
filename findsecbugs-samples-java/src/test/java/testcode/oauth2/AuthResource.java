@@ -1,4 +1,4 @@
-package testcode.authclient;
+package testcode.oauth2;
 
 import com.nimbusds.oauth2.sdk.*;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
@@ -7,9 +7,10 @@ import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
-import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import com.nimbusds.openid.connect.sdk.*;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import net.minidev.json.JSONObject;
 
@@ -17,10 +18,13 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.Properties;
 
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
@@ -28,8 +32,61 @@ import static java.util.Collections.singletonMap;
 @Path("/auth")
 public class AuthResource {
 
+   public enum Keys {
+        CLIENT_ID("client_id"),
+        CLIENT_ID_ADMIN("client_id_admin"),
+        CLIENT_SECRET("client_secret"),
+        CLIENT_SECRET_ADMIN("client_secret_admin");
 
-    public AuthResource() {}
+        private final String key;
+        Keys(String key) {this.key = key;}
+
+        public String getKey() {
+            return key;
+        }
+    }
+
+    public static class Config {
+        private Properties propertiesConfig = new Properties();
+
+        private Config() {
+            String propertiesFileName = "config.properties";
+            try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(propertiesFileName)) {
+                if(inputStream == null) {
+                    throw new FileNotFoundException("Config property file was not found in the classpath");
+                }
+                propertiesConfig.load(inputStream);
+            } catch (Exception e) {
+                // Log errors
+            }
+        }
+
+        public String getValue(Keys key) {
+            return propertiesConfig.getProperty(key.getKey());
+        }
+
+        public String getClientId() {
+            return getValue(Keys.CLIENT_ID);
+        }
+
+        public String getClientSecret() {
+            return getValue(Keys.CLIENT_SECRET);
+        }
+
+        public String getAdminClientId() {
+            return getValue(Keys.CLIENT_ID_ADMIN);
+        }
+
+        public String getAdminClientSecret() {
+            return getValue(Keys.CLIENT_SECRET_ADMIN);
+        }
+    }
+
+    private final Config config;
+
+    public AuthResource(Config config) {
+        this.config = config;
+    }
 
     @Path("login")
     @POST
@@ -41,8 +98,7 @@ public class AuthResource {
             String username = body.get("username");
             Secret password = new Secret(body.get("password"));
             AuthorizationGrant passwordGrant =
-                    new ResourceOwnerPasswordCredentialsGrant(username, password);
-
+                    new ResourceOwnerPasswordCredentialsGrant(username, password); // FIXME: password grant bad practice
             HTTPResponse httpResponse = getHttpResponse(passwordGrant, getUserType(body));
             password.erase(); // FIXME bug; insecure practice. Should be in finally block. Bad control flow.
             handleErrorResponses(httpResponse);
@@ -54,7 +110,41 @@ public class AuthResource {
             if(e instanceof ParseException) {
                 throw new WebApplicationException("Error while parsing access token", e);
             }
-            throw new WebApplicationException("Error getting access token", e); // FIXME bug: bad practice, should maybe give valid response
+            throw new WebApplicationException("Error getting access token", e);
+        }
+    }
+
+    public void exampleAuthenticationRequest() {
+        try {
+            // The client identifier provisioned by the server
+            ClientID clientID = new ClientID(config.getClientId());
+            URI callbackURI = new URI("https://client.com/callback");
+            // Generate random state string and nonce for pairing the response to the request
+            State state = new State();
+            // Nonce nonce = new Nonce();
+            AuthenticationRequest req = new AuthenticationRequest(
+                    new URI("https://c2id.com/login"),
+                    new ResponseType("code"),
+                    Scope.parse("openid email profile address"),
+                    clientID,
+                    callbackURI,
+                    state,
+                null);
+            HTTPResponse httpResponse = req.toHTTPRequest().send(); // Step 3
+            AuthenticationResponse response = AuthenticationResponseParser.parse(httpResponse); // Step 7
+            if (response instanceof AuthenticationErrorResponse) {
+                // process error
+            }
+            AuthenticationSuccessResponse successResponse =  response.toSuccessResponse();
+            AuthorizationCode code = successResponse.getAuthorizationCode();
+            // Don't forget to check the state
+            if(!successResponse.getState().equals(state)) {
+                // Unauthorized
+            }
+        } catch (URISyntaxException e) {
+        } catch (IOException e) {
+        } catch (ParseException e) {
+        } catch (ClassCastException e) {
         }
     }
 
@@ -66,11 +156,18 @@ public class AuthResource {
                 return Response.status(Response.Status.UNAUTHORIZED).entity("Refreshtoken was not found").build();
             }
             AuthorizationGrant refreshTokenGrant = new RefreshTokenGrant(new RefreshToken(body.get("refreshToken")));
+
             HTTPResponse httpResponse = getHttpResponse(refreshTokenGrant, getUserType(body));
-
-            handleErrorResponses(httpResponse);
+            JSONObject responseBody = httpResponse.getContentAsJSONObject();
+            int statusCode = httpResponse.getStatusCode();
+            if(statusCode == 401 || statusCode == 403 // FIXME bug: blacklist approach
+                    || statusCode == 400 && "invalid_grant".equals(responseBody.get("error"))) {
+                throw new NotAuthorizedException(
+                        statusCode,
+                        "Unsuccessful login"
+                );
+            }
             OIDCTokenResponse response = OIDCTokenResponse.parse(httpResponse);
-
             return getResponse(response);
         } catch (Exception e) {
             throw new RuntimeException("Error getting access token", e);
@@ -83,6 +180,7 @@ public class AuthResource {
         OIDCTokens tokens = successResponse.getOIDCTokens();
         AccessToken accessToken = tokens.getAccessToken();
         RefreshToken refreshToken = tokens.getRefreshToken();
+
         return Response.ok()
                 .entity(new OpenIdTokens(
                         tokens.getIDTokenString(),
@@ -96,9 +194,9 @@ public class AuthResource {
 
         Scope scope = new Scope("profile", "openidconnect");
 
-        String endpoint = userType == UserType.ADMIN ? "https://organization.com/api/admintoken":
-                                                        "https://organization.com/api/token"; // USER
-        URI tokenEndpoint = new URI(endpoint);
+        URI tokenEndpoint = new URI(userType == UserType.ADMIN ?
+                                         "https://organization.com/api/admintoken":
+                                         "https://organization.com/api/token");
 
         TokenRequest request =
                 new TokenRequest(
@@ -137,12 +235,12 @@ public class AuthResource {
 
     private ClientAuthentication getClientAuthentication(UserType userType) {
         if(userType == UserType.USER) {
-            ClientID clientID = new ClientID(1);
-            Secret clientSecret = new Secret(1);
+            ClientID clientID = new ClientID(config.getClientId());
+            Secret clientSecret = new Secret(config.getClientSecret());
             return new ClientSecretBasic(clientID, clientSecret);
-        } else {
-            ClientID clientID = new ClientID(1);
-            Secret clientSecret = new Secret(1);
+        } else { // Admin
+            ClientID clientID = new ClientID(config.getAdminClientId());
+            Secret clientSecret = new Secret(config.getAdminClientSecret());
             return new ClientSecretBasic(clientID, clientSecret);
         }
 

@@ -1,8 +1,10 @@
-package com.h3xstream.findsecbugs.authclient;
+package com.h3xstream.findsecbugs.oauth2;
 
 import edu.umd.cs.findbugs.*;
 import edu.umd.cs.findbugs.ba.*;
+import edu.umd.cs.findbugs.ba.npe.IsNullValue;
 import edu.umd.cs.findbugs.ba.npe.IsNullValueDataflow;
+import edu.umd.cs.findbugs.ba.npe.IsNullValueFrame;
 import edu.umd.cs.findbugs.ba.type.ExceptionSetFactory;
 import edu.umd.cs.findbugs.ba.type.StandardTypeMerger;
 import edu.umd.cs.findbugs.ba.vna.ValueNumber;
@@ -293,16 +295,14 @@ public class InsecureDeleteSecretDetector extends ResourceTrackingDetector<Secre
         }
 
         @Override
-        public boolean ignoreImplicitExceptions(Secret resource) {
-            // JSR166 locks should be ALWAYS be released,
-            // including when implicit runtime exceptions are thrown
+        public boolean ignoreImplicitExceptions(Secret secret) {
+
             return false;
         }
 
         @Override
         public boolean ignoreExceptionEdge(Edge edge, Secret resource, ConstantPoolGen cpg) {
-            return false;
-           /* try {
+            try {
            // TODO: handle this feature properly
                 Location location = cfg.getExceptionThrowerLocation(edge);
                 if (DEBUG) {
@@ -318,7 +318,7 @@ public class InsecureDeleteSecretDetector extends ResourceTrackingDetector<Secre
                     }
                     // Ignore exceptions from getfield instructions where the
                     // object reference is known not to be null
-                    if ("secret".equals(fieldName)) {
+                    if ("secret".equals(fieldName) || "token".equals(fieldName) || "password".equals(fieldName)) {
                         return true;
                     }
                     IsNullValueFrame frame = isNullDataflow.getFactAtLocation(location);
@@ -335,7 +335,7 @@ public class InsecureDeleteSecretDetector extends ResourceTrackingDetector<Secre
                     InvokeInstruction iins = (InvokeInstruction) ins;
                     String methodName = iins.getMethodName(cpg);
 
-                    if ("init".equals(methodName) || "erase".equals(methodName)) {
+                    if ("getValue".equals(methodName) || "<init>".equals(methodName) || "erase".equals(methodName)) {
                         return true;
                     }
                 }
@@ -346,7 +346,7 @@ public class InsecureDeleteSecretDetector extends ResourceTrackingDetector<Secre
                 AnalysisContext.logError("Error while looking for exception edge", e);
             }
 
-            return false;*/
+            return false;
         }
 
         @Override

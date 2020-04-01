@@ -1,4 +1,4 @@
-package testcode.authclient;
+package testcode.oauth2;
 
 
 import java.security.Principal;

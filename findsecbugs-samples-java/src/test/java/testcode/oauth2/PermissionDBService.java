@@ -1,9 +1,7 @@
-package testcode.authclient;
+package testcode.oauth2;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 public class PermissionDBService {
 
     public List<SecurityContext.Permission> permissionsForUser(String user) {

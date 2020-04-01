@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.authclient;
+package com.h3xstream.findsecbugs.oauth2;
 
 
 import edu.umd.cs.findbugs.ba.*;

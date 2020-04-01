@@ -1,4 +1,4 @@
-package testcode.authclient;
+package testcode.oauth2;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -6,7 +6,6 @@ import com.google.common.cache.LoadingCache;
 
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 
 public class PermissionService {
@@ -18,7 +17,7 @@ public class PermissionService {
         permissionsCache = CacheBuilder.newBuilder()
                 .maximumSize(maxCacheSize)
                 .expireAfterAccess(expireTime)
-                .build(CacheLoader.    from(permissionDB::permissionsForUser));
+                .build(CacheLoader.from(permissionDB::permissionsForUser));
     }
 
     public List<SecurityContext.Permission> permissionsForUser(String username) {

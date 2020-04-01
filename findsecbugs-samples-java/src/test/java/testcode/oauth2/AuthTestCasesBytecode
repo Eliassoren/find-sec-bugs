@@ -1,8 +1,8 @@
 Compiled from "AuthTestCases.java"
-public class testcode.authclient.AuthTestCases {
+public class testcode.oauth2.InsecureDeleteSecret {
   static java.security.SecureRandom secureRandomGenerator;
 
-  public testcode.authclient.AuthTestCases();
+  public testcode.oauth2.InsecureDeleteSecret();
     Code:
        0: aload_0
        1: invokespecial #1                  // Method java/lang/Object."<init>":()V
