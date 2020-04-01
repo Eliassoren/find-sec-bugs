@@ -6309,4 +6309,82 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECOPFP">Overly permissive file permission</BugCode>
 
+    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureDeleteSecretDetector">
+        <Details>Looking for unsafe flows for Oauth usage of secrets and blacklists</Details>
+    </Detector>
+    <BugPattern type="UNSAFE_DELETE_SECRET_AUTH">
+        <ShortDescription>Deletion of secrets may fail given a certain control flow.</ShortDescription>
+        <LongDescription>In order to fix this, make sure any path ends with deletion of secret.... </LongDescription>
+        <Details>
+            <![CDATA[
+            <pre>
+                public static void OK_passwordPossiblyNotErased() {
+            Secret password = new Secret("foo");
+            if (randomCase()) {
+                password.erase();
+                // Other operations
+                return;
+            }
+            else if(StringUtils.isBlank(password.getValue())) { // Usage of variable
+                password.erase();
+                // Other operations
+                return;
+            }
+            password.erase();
+    }
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECUDOS">Unsafe delete of secret.</BugCode>
+
+    <BugPattern type="UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH">
+        <ShortDescription>Deletion of secrets may fail given a certain control flow in an exception path.</ShortDescription>
+        <LongDescription>In order to fix this, make sure any exception path ends with deletion of secret.... </LongDescription>
+        <Details>
+            <![CDATA[
+            <pre>
+               public static void OK_notCloseBecauseException()
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECUDOSE">Unsafe delete of secret in exception path.</BugCode>
+
+    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureAuthorizationGrantDetector">
+        <Details>Looking usage of disallowed authorization grant usage according to the new OAuth standard</Details>
+    </Detector>
+    <BugPattern type="USING_PASSWORD_GRANT">
+        <ShortDescription>Usage of insecure authorization grant. Use redirection flow instead.</ShortDescription>
+        <LongDescription>The new update of the OAuth 2.0 standard disallows usage of this method entirely: https://tools.ietf.org/html/draft-ietf-oauth-security-topics-13#section-3.4 </LongDescription>
+        <Details>
+            <![CDATA[
+            <p>Instead of the password grant, use proper redirect methods with for example authorization code grant. </p>
+            <pre>
+               AuthorizationCode code = new AuthorizationCode("xyz...");
+                URI callback = new URI("https://client.com/callback");
+                AuthorizationGrant codeGrant = new AuthorizationCodeGrant(code, callback);
+
+                // The credentials to authenticate the client at the token endpoint
+                ClientID clientID = new ClientID("123");
+                Secret clientSecret = new Secret("secret");
+                ClientAuthentication clientAuth = new ClientSecretBasic(clientID, clientSecret);
+
+                // The token endpoint
+                URI tokenEndpoint = new URI("https://c2id.com/token");
+
+                // Make the token request
+                TokenRequest request = new TokenRequest(tokenEndpoint, clientAuth, codeGrant);
+
+                TokenResponse response = OIDCTokenResponseParser.parse(request.toHTTPRequest().send());
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECISAUTH">sage of insecure authorization grant.</BugCode>
+
+
+
+
+
 </MessageCollection>
