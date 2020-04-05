@@ -23,7 +23,7 @@ public class OidcPasswordGrantTest extends BaseDetectorTest{
         //Assertions
         verify(reporter).doReportBug(
                 bugDefinition()
-                        .bugType("USING_PASSWORD_GRANT")
+                        .bugType("USING_PASSWORD_GRANT_OAUTH")
                         .inClass("OidcPasswordGrant")
                         .inMethod("authenticate")
                         .build()

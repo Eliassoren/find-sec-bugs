@@ -1,4 +1,4 @@
-package testcode.oauth2;
+package testcode.oauth2.otherexamples;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;

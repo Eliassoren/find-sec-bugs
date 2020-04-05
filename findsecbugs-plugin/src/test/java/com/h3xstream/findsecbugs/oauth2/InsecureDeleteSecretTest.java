@@ -71,27 +71,6 @@ public class InsecureDeleteSecretTest extends BaseDetectorTest {
 
     }
 
-   /* @Test
-    public void unsafeDeleteSecretExceptionPathTest() throws Exception {
-        //Locate test code
-        String[] files = {
-                getClassFilePath("testcode/authclient/InsecureDeleteSecret")
-        };
-
-        //Run the analysis
-        EasyBugReporter reporter = spy(new SecurityReporter());
-        analyze(files, reporter);
-
-
-        //Assertions
-        verify(reporter).doReportBug(
-                bugDefinition()
-                        .bugType("UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH")
-                        .inClass("InsecureDeleteSecret")
-                        .inMethod("secretPossiblyNotErasedBecauseOfException")
-                        .build()
-        );
-    }*/
 
 
 }

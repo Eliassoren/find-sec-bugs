@@ -6354,7 +6354,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureAuthorizationGrantDetector">
         <Details>Looking usage of disallowed authorization grant usage according to the new OAuth standard</Details>
     </Detector>
-    <BugPattern type="USING_PASSWORD_GRANT">
+    <BugPattern type="USING_PASSWORD_GRANT_OAUTH">
         <ShortDescription>Usage of insecure authorization grant. Use redirection flow instead.</ShortDescription>
         <LongDescription>The new update of the OAuth 2.0 standard disallows usage of this method entirely: https://tools.ietf.org/html/draft-ietf-oauth-security-topics-13#section-3.4 </LongDescription>
         <Details>

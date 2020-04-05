@@ -1,4 +1,4 @@
-package testcode.oauth2;
+package testcode.oauth2.otherexamples;
 
 import java.util.Arrays;
 import java.util.List;
