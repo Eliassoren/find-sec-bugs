@@ -23,6 +23,7 @@ public class OidcAuthenticationRequestStateUsage {
         response.toErrorResponse();
     }
 
+    // Doesn't check state param. Expect bug.
     public void exampleAuthenticationRequestForgetCheckState() {
         try {
             // The client identifier provisioned by the server
@@ -92,12 +93,12 @@ public class OidcAuthenticationRequestStateUsage {
         }
     }
 
+    // Doesn't check state. Expect bug.
     private void stateMatcherHandleNoMatch(AuthenticationSuccessResponse successResponse,State state) {
         successResponse.toParameters();
     }
 
-
-
+    // Calls to method that doesn't check state. Expect bug.
     public void exampleAuthenticationRequestForgetCheckStateInCallToOther() {
         // Pass state to method with no verification
         try {
