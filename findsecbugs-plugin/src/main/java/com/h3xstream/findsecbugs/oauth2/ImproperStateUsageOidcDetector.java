@@ -18,9 +18,8 @@ import static com.h3xstream.findsecbugs.common.matcher.InstructionDSL.invokeInst
 
 public class ImproperStateUsageOidcDetector implements Detector {
 
-    // Forget to use state altogether
     // Forget comparing state after receiving response to authorization request.
-
+    // Forget checking state in method reference where state is passed
 
     private BugReporter bugReporter;
     private static final String FORGOT_VERIFY_OIDC_STATE = "FORGOT_VERIFY_OIDC_STATE";
@@ -35,6 +34,7 @@ public class ImproperStateUsageOidcDetector implements Detector {
                                     .atClass("com/nimbusds/oauth2/sdk/id/State")
                                     .atMethod("equals")
                                     .withArgs("(Ljava/lang/Object;)Z");
+
     public ImproperStateUsageOidcDetector(BugReporter bugReporter) {
         this.bugReporter = bugReporter;
     }
@@ -44,37 +44,38 @@ public class ImproperStateUsageOidcDetector implements Detector {
         JavaClass javaClass = classContext.getJavaClass();
         boolean foundAuthContext; // This must be true to trigger the search for state verification
         boolean foundStateVerify; // This must be true in the end to be safe.
-        boolean foundStatePassedAsParamToPossibleCheck; // This lowers the risk.
+        boolean foundStatePassedAsParamToPossibleCheck; // We pass state outside of the procedure and need an additional check.
+
         Method[] methodList = javaClass.getMethods();
         List<Method> methodsWithStateCheck = new ArrayList<>();
-        Map<String, Method> methodCallsThatShouldHaveStateCheck = new HashMap<>(); // Call to a method where state param is called, and caller.
+        Map<String, Method> methodCallsThatShouldHaveStateCheck = new HashMap<>();
+        // Call to a method where state param is called, and caller.
+
         for (Method m : methodList) {
             foundAuthContext = false;
             foundStateVerify = false;
             foundStatePassedAsParamToPossibleCheck = false;
+
             MethodGen methodGen = classContext.getMethodGen(m);
-
-
             ConstantPoolGen cpg = classContext.getConstantPoolGen();
             if (methodGen == null || methodGen.getInstructionList() == null) {
                 continue; //No instruction .. nothing to do
             }
-            for (Iterator<InstructionHandle> itIns = methodGen.getInstructionList().iterator(); itIns.hasNext();) {
-                Instruction instruction = itIns.next().getInstruction();
+
+            for (InstructionHandle instructionHandle : methodGen.getInstructionList()) {
+                Instruction instruction = instructionHandle.getInstruction();
                 if (instruction instanceof INVOKESPECIAL) {
                     INVOKESPECIAL invoke = (INVOKESPECIAL) instruction;
                     if (AUTH_REQUEST_INIT.matches(instruction, cpg) &&
                             invoke.getSignature(cpg).contains("Lcom/nimbusds/oauth2/sdk/id/State;")) {
                         foundAuthContext = true;
                     } else if (invoke.getSignature(cpg).contains("Lcom/nimbusds/oauth2/sdk/id/State;") &&
-                                (invoke.getSignature(cpg).endsWith(")V") || // void call
-                                !invoke.getSignature(cpg).endsWith("Lcom/nimbusds/openid/connect/sdk/AuthenticationResponse;"))) {
+                            // Any other reference where state is passed than AuthenticationResponse assumed to be possible verifier.
+                            !invoke.getSignature(cpg).endsWith("Lcom/nimbusds/openid/connect/sdk/AuthenticationResponse;")) {
                         foundStatePassedAsParamToPossibleCheck = true;
                         methodCallsThatShouldHaveStateCheck.put(invoke.getMethodName(cpg), m);
                     }
-
-                }
-                else if (instruction instanceof INVOKEVIRTUAL) {
+                } else if (instruction instanceof INVOKEVIRTUAL) {
                     if (STATE_EQUALS_METHOD.matches(instruction, cpg)) {
                         foundStateVerify = true;
                         methodsWithStateCheck.add(m);
@@ -82,21 +83,20 @@ public class ImproperStateUsageOidcDetector implements Detector {
                 }
             }
 
-
             if (foundAuthContext && !foundStateVerify && !foundStatePassedAsParamToPossibleCheck) {
-                bugReporter.reportBug(new BugInstance(this, FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY) //
+                bugReporter.reportBug(new BugInstance(this, FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
                         .addClassAndMethod(javaClass, m));
             }
         }
 
-        // Search interprocedurally to see whether the called methods actually appear to do verification.
+        // Search interprocedurally to see whether the flagged methods actually appear to do verification.
         for (String calledMethodName : methodCallsThatShouldHaveStateCheck.keySet()) {
             Method method = findMethodWithName(javaClass, calledMethodName);
             Method callerMethod = methodCallsThatShouldHaveStateCheck.get(calledMethodName);
             if(method != null && !methodsWithStateCheck.contains(method)) {
-                bugReporter.reportBug(new BugInstance(this, POSSIBLY_FORGOT_VERIFY_OIDC_STATE, Priorities.LOW_PRIORITY) //
+                bugReporter.reportBug(new BugInstance(this, POSSIBLY_FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
                         .addClassAndMethod(javaClass, callerMethod));
-                bugReporter.reportBug(new BugInstance(this, POSSIBLY_FORGOT_VERIFY_OIDC_STATE, Priorities.LOW_PRIORITY) //
+                bugReporter.reportBug(new BugInstance(this, POSSIBLY_FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
                         .addClassAndMethod(javaClass, method));
             }
         }

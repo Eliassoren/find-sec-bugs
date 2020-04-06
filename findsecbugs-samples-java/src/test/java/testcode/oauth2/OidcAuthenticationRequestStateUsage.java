@@ -94,7 +94,7 @@ public class OidcAuthenticationRequestStateUsage {
     }
 
     // Doesn't check state. Expect bug.
-    private void stateMatcherHandleNoMatch(AuthenticationSuccessResponse successResponse,State state) {
+    private void stateMatcherHandleNoMatch(AuthenticationSuccessResponse successResponse, State state) {
         successResponse.toParameters();
     }
 

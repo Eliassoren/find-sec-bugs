@@ -6417,7 +6417,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
             ]]>
         </Details>
     </BugPattern>
-    <BugCode abbrev="SECPFVOST">Forgot to check state during OIDC authentication.</BugCode>
+    <BugCode abbrev="SECPFVOST">Possibly forgot to check state during OIDC authentication state passed method call.</BugCode>
 
 
 
