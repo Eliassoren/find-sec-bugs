@@ -46,7 +46,7 @@ public class OidcAuthenticationRequestStateUsage {
                 // process error
                 processError(response);
             }
-
+            response.toSuccessResponse();
             // Don't forget to check the state
            // if(!successResponse.getState().equals(state)) {
                 // Unauthorized
