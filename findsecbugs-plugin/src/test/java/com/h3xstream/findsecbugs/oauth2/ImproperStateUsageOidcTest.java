@@ -12,7 +12,7 @@ public class ImproperStateUsageOidcTest extends BaseDetectorTest{
     public void forgotToCheckStateTest() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oauth2/OidcAuthenticationRequestStateUsage")
+                getClassFilePath("testcode/oidc/OidcAuthenticationRequestStateUsage")
         };
 
         //Run the analysis

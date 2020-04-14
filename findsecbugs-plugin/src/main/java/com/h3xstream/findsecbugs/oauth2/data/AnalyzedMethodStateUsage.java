@@ -2,15 +2,15 @@ package com.h3xstream.findsecbugs.oauth2.data;
 
 import org.apache.bcel.classfile.Method;
 
-public class AnalyzedMethod {
+public class AnalyzedMethodStateUsage {
     public final Method method;
-    public final boolean foundAuthContext;
+    public final boolean foundAuthContextWithState;
     public final boolean foundStateVerify;
     public final boolean foundStatePassedAsParamToPossibleCheck;
 
-    public AnalyzedMethod(Method method, boolean foundAuthContext, boolean foundStateVerify, boolean foundStatePassedAsParamToPossibleCheck) {
+    public AnalyzedMethodStateUsage(Method method, boolean foundAuthContextWithState, boolean foundStateVerify, boolean foundStatePassedAsParamToPossibleCheck) {
         this.method = method;
-        this.foundAuthContext = foundAuthContext;
+        this.foundAuthContextWithState = foundAuthContextWithState;
         this.foundStateVerify = foundStateVerify;
         this.foundStatePassedAsParamToPossibleCheck = foundStatePassedAsParamToPossibleCheck;
     }

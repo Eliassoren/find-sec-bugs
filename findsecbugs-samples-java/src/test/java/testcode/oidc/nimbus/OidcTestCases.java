@@ -1,6 +1,6 @@
 
 
-package testcode.oauth2;
+package testcode.oidc.nimbus;
 
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.oauth2.sdk.*;
@@ -13,7 +13,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.*;
-import testcode.oauth2.otherexamples.AuthResource;
+import testcode.oidc.otherexamples.AuthResource;
 
 import java.io.IOException;
 import java.net.URI;

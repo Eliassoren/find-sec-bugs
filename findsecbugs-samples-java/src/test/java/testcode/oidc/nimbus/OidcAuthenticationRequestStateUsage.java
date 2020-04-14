@@ -1,14 +1,10 @@
-package testcode.oauth2;
+package testcode.oidc.nimbus;
 
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.*;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.*;
-import org.springframework.security.core.Authentication;
 
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -24,12 +20,12 @@ public class OidcAuthenticationRequestStateUsage {
     }
 
     // Doesn't check state param. Expect bug.
-    public void exampleAuthenticationRequestForgetCheckState() {
+    public Response exampleAuthenticationRequestForgetCheckState() {
         try {
             // The client identifier provisioned by the server
             ClientID clientID = new ClientID(config.getProperty("client_id"));
             URI callback = new URI("https://client.com/callback");
-            // Generate random state string and nonce for pairing the response to the request
+            // Generate state string and nonce to mitigate CSRF
             State state = new State();
             Nonce nonce = new Nonce();
             AuthenticationRequest req = new AuthenticationRequest(
@@ -40,30 +36,34 @@ public class OidcAuthenticationRequestStateUsage {
                     callback,
                     state,
                     nonce);
-            HTTPResponse httpResponse = req.toHTTPRequest().send(); // Step 3
-            AuthenticationResponse response = AuthenticationResponseParser.parse(httpResponse); // Step 7
+            HTTPResponse httpResponse = req.toHTTPRequest().send();
+            AuthenticationResponse
+                    response = AuthenticationResponseParser.parse(httpResponse);
             if (response instanceof AuthenticationErrorResponse) {
                 // process error
                 processError(response);
             }
-            response.toSuccessResponse();
+            AuthenticationSuccessResponse
+                    successResponse = response.toSuccessResponse();
             // Don't forget to check the state
            // if(!successResponse.getState().equals(state)) {
-                // Unauthorized
+             //   return Response.status(Response.Status.UNAUTHORIZED).build();
            // }
-        } catch (URISyntaxException | ParseException | ClassCastException e) {
-            //
-        } catch (IOException e) {
-            // Handle differently
+            return Response.ok()
+                    .entity(successResponse)
+                    .build();
+        } catch (URISyntaxException | ParseException | ClassCastException | IOException e) {
+            // Error handling
         }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
     }
 
-    public void OK_exampleAuthenticationRequestForgetCheckState() {
+    public Response OK_exampleSafeAuthenticationRequest() {
         try {
             // The client identifier provisioned by the server
             ClientID clientID = new ClientID(config.getProperty("client_id"));
             URI callback = new URI("https://client.com/callback");
-            // Generate random state string and nonce for pairing the response to the request
+            // Generate state string and nonce to mitigate CSRF
             State state = new State();
             Nonce nonce = new Nonce();
             AuthenticationRequest req = new AuthenticationRequest(
@@ -74,23 +74,26 @@ public class OidcAuthenticationRequestStateUsage {
                     callback,
                     state,
                     nonce);
-            HTTPResponse httpResponse = req.toHTTPRequest().send(); // Step 3
-            AuthenticationResponse response = AuthenticationResponseParser.parse(httpResponse); // Step 7
+            HTTPResponse httpResponse = req.toHTTPRequest().send();
+            AuthenticationResponse
+                    response = AuthenticationResponseParser.parse(httpResponse);
             if (response instanceof AuthenticationErrorResponse) {
-                // process error
+                processError(response);
             }
-            AuthenticationSuccessResponse successResponse =  response.toSuccessResponse();
-            AuthorizationCode code = successResponse.getAuthorizationCode();
+            AuthenticationSuccessResponse
+                    successResponse = response.toSuccessResponse();
             // Don't forget to check the state
-             if(!successResponse.getState().equals(state)) {
-                // Unauthorized
+            if(!successResponse.getState().equals(state)) {
+                return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-        } catch (URISyntaxException e) {
-        } catch (IOException e) {
-        } catch (ParseException e) {
-        } catch (ClassCastException e) {
+            return Response.ok()
+                    .entity(successResponse)
+                    .build();
 
+        } catch (URISyntaxException | ParseException | ClassCastException | IOException e) {
+            // Error handling
         }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
     }
 
     // Doesn't check state. Expect bug.

@@ -14,7 +14,7 @@ public class InsecureDeleteSecretTest extends BaseDetectorTest {
     public void unsafeDeleteSecretTest() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oauth2/InsecureDeleteSecret")
+                getClassFilePath("testcode/oidc/InsecureDeleteSecret")
         };
 
         //Run the analysis

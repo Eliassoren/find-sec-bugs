@@ -1,7 +1,7 @@
 package com.h3xstream.findsecbugs.oauth2;
 
 import com.h3xstream.findsecbugs.common.matcher.InvokeMatcherBuilder;
-import com.h3xstream.findsecbugs.oauth2.data.AnalyzedMethod;
+import com.h3xstream.findsecbugs.oauth2.data.AnalyzedMethodStateUsage;
 import com.h3xstream.findsecbugs.oauth2.data.CalledMethodIdentifiers;
 import edu.umd.cs.findbugs.*;
 import edu.umd.cs.findbugs.ba.ClassContext;
@@ -42,22 +42,21 @@ public class ImproperStateUsageOidcDetector implements Detector {
     @Override
     public void visitClassContext(ClassContext classContext) {
         JavaClass javaClass = classContext.getJavaClass();
-        boolean foundAuthContext = false; // This must be true to trigger the search for state verification
+        boolean foundAuthRequestWithState = false; // This must be true to trigger the search for state verification
         boolean foundStateVerify = false; // This must be true in the end to be safe.
         boolean foundStatePassedAsParamToPossibleCheck = false; // We pass state outside of the procedure and need an additional check.
 
         Method[] methods = javaClass.getMethods();
-        List<AnalyzedMethod> analyzedMethods = new ArrayList<>();
         List<Method> methodsWithStateCheck = new ArrayList<>();
-        Map<MethodAnnotation, AnalyzedMethod> methodCallersThatShouldHaveStateCheckForeignMethod = new HashMap<>();
-        Map<CalledMethodIdentifiers, AnalyzedMethod> methodCallersThatShouldHaveStateCheckForeignNotFound = new HashMap<>();
-        Map<Method, AnalyzedMethod> methodCallersThatShouldHaveStateCheck = new HashMap<>();
+        Map<MethodAnnotation, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheckForeignMethod = new HashMap<>();
+        Map<CalledMethodIdentifiers, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheckForeignNotFound = new HashMap<>();
+        Map<Method, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheck = new HashMap<>();
 
 
         // Call to a method where state param is called, and caller.
 
         for (Method m : methods) {
-            foundAuthContext = false;
+            foundAuthRequestWithState = false;
             foundStateVerify = false;
             foundStatePassedAsParamToPossibleCheck = false;
 
@@ -69,15 +68,15 @@ public class ImproperStateUsageOidcDetector implements Detector {
 
             for (InstructionHandle instructionHandle : methodGen.getInstructionList()) {
                 Instruction instruction = instructionHandle.getInstruction();
-                InvokeInstruction invokeInstruction = (InvokeInstruction) instruction;
                 if (instruction instanceof INVOKESPECIAL) {
                     INVOKESPECIAL invoke = (INVOKESPECIAL) instruction;
+                    InvokeInstruction invokeInstruction = (InvokeInstruction) instruction;
                     if (AUTH_REQUEST_INIT.matches(instruction, cpg) &&
                             invoke.getSignature(cpg).contains("Lcom/nimbusds/oauth2/sdk/id/State;")) {
-                        foundAuthContext = true;
+                        foundAuthRequestWithState = true;
                     } else if (invoke.getSignature(cpg).contains("Lcom/nimbusds/oauth2/sdk/id/State;") &&
                             // Any other reference where state is passed than AuthenticationResponse assumed to be possible verifier.
-                            !invoke.getSignature(cpg).endsWith("Lcom/nimbusds/openid/connect/sdk/AuthenticationResponse;")) {
+                            !invoke.getSignature(cpg).endsWith("Lcom/nimbusds/openid/connect/sdk/AuthenticationRequest;")) {
                         foundStatePassedAsParamToPossibleCheck = true;
                         Method calledMethod = findMethodWithName(javaClass, invoke.getMethodName(cpg));
                         if(calledMethod == null) { // The method called is not in this java class
@@ -85,8 +84,8 @@ public class ImproperStateUsageOidcDetector implements Detector {
                                 JavaClassAndMethod exactMethod = Hierarchy.findExactMethod(invokeInstruction, cpg);
                                 MethodAnnotation methodAnnotation = MethodAnnotation.fromXMethod(exactMethod.toXMethod());
                                 methodCallersThatShouldHaveStateCheckForeignMethod.put(
-                                        methodAnnotation, new AnalyzedMethod(m,
-                                                                            foundAuthContext,
+                                        methodAnnotation, new AnalyzedMethodStateUsage(m,
+                                                                            foundAuthRequestWithState,
                                                                             foundStateVerify,
                                                                             foundStatePassedAsParamToPossibleCheck
                                         ));
@@ -98,8 +97,8 @@ public class ImproperStateUsageOidcDetector implements Detector {
                                 );
                                 methodCallersThatShouldHaveStateCheckForeignNotFound.put(
                                         calledMethodIdentifiers,
-                                        new AnalyzedMethod(m,
-                                                           foundAuthContext,
+                                        new AnalyzedMethodStateUsage(m,
+                                                           foundAuthRequestWithState,
                                                            foundStateVerify,
                                                            foundStatePassedAsParamToPossibleCheck
                                         ));
@@ -107,8 +106,8 @@ public class ImproperStateUsageOidcDetector implements Detector {
                         } else {
                             methodCallersThatShouldHaveStateCheck.put(
                                     calledMethod,
-                                    new AnalyzedMethod(m,
-                                                        foundAuthContext,
+                                    new AnalyzedMethodStateUsage(m,
+                                                        foundAuthRequestWithState,
                                                         foundStateVerify,
                                                         foundStatePassedAsParamToPossibleCheck
                                     ));
@@ -123,35 +122,31 @@ public class ImproperStateUsageOidcDetector implements Detector {
                 }
             }
 
-            if (foundAuthContext && !foundStateVerify && !foundStatePassedAsParamToPossibleCheck) {
+            if (foundAuthRequestWithState && !foundStateVerify && !foundStatePassedAsParamToPossibleCheck) {
                 bugReporter.reportBug(new BugInstance(this, FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
                         .addClassAndMethod(javaClass, m));
             }
         }
 
-            // FIXME: this is problematic. the variable flags don't correspond since they're reset for each method
-            // FIXME: I want to check that we actually have auth context in the given class, and that state verify wasn't found in caller method
-            // TODO suggestion: make a data structure with (method, whether it has auth context, whether it constains a state verify)
-            // Search interprocedurally to see whether the flagged methods actually appear to do verification.
-            //Method method = findMethodWithName(javaClass, calledMethod.getMethodName());
-            // hva om method er null? Kallet er til en annen klasse?
-            // low
+
             if(!methodCallersThatShouldHaveStateCheck.isEmpty()) {
-                for(Method calledMethod : methodCallersThatShouldHaveStateCheck.keySet()) {
-                    AnalyzedMethod analyzedMethod = methodCallersThatShouldHaveStateCheck.get(calledMethod);
-                    if(analyzedMethod.foundAuthContext && !analyzedMethod.foundStateVerify && analyzedMethod.foundStatePassedAsParamToPossibleCheck) {
-                        reportInterproceduralMethodCall(javaClass,
-                                                    calledMethod,
-                                                    analyzedMethod.method,
-                                                    methodsWithStateCheck);
+                for(Method localCalledMethod : methodCallersThatShouldHaveStateCheck.keySet()) {
+                    AnalyzedMethodStateUsage analyzedMethod = methodCallersThatShouldHaveStateCheck.get(localCalledMethod);
+                    if(analyzedMethod.foundAuthContextWithState && !analyzedMethod.foundStateVerify && analyzedMethod.foundStatePassedAsParamToPossibleCheck) {
+                        if(!methodsWithStateCheck.contains(localCalledMethod)) {
+                            reportInterproceduralMethodCall(javaClass,
+                                    localCalledMethod,
+                                    analyzedMethod.method);
+
+                        }
                     }
                 }
             }
 
             if(!methodCallersThatShouldHaveStateCheckForeignMethod.isEmpty()) {
                 for(MethodAnnotation calledMethodAnnotation : methodCallersThatShouldHaveStateCheckForeignMethod.keySet()) {
-                    AnalyzedMethod analyzedMethod = methodCallersThatShouldHaveStateCheckForeignMethod.get(calledMethodAnnotation);
-                    if(analyzedMethod.foundAuthContext && !analyzedMethod.foundStateVerify && analyzedMethod.foundStatePassedAsParamToPossibleCheck) {
+                    AnalyzedMethodStateUsage analyzedMethod = methodCallersThatShouldHaveStateCheckForeignMethod.get(calledMethodAnnotation);
+                    if(analyzedMethod.foundAuthContextWithState && !analyzedMethod.foundStateVerify && analyzedMethod.foundStatePassedAsParamToPossibleCheck) {
                         reportInterproceduralMethodCall(
                                 javaClass,
                                 calledMethodAnnotation,
@@ -163,18 +158,15 @@ public class ImproperStateUsageOidcDetector implements Detector {
 
             if(!methodCallersThatShouldHaveStateCheckForeignNotFound.isEmpty()) {
                 for(CalledMethodIdentifiers calledMethodIdentifiers: methodCallersThatShouldHaveStateCheckForeignNotFound.keySet()) {
-                    AnalyzedMethod analyzedMethod = methodCallersThatShouldHaveStateCheckForeignNotFound.get(calledMethodIdentifiers);
-                    if(analyzedMethod.foundAuthContext && !analyzedMethod.foundStateVerify && analyzedMethod.foundStatePassedAsParamToPossibleCheck) {
+                    AnalyzedMethodStateUsage analyzedMethod = methodCallersThatShouldHaveStateCheckForeignNotFound.get(calledMethodIdentifiers);
+                    if(analyzedMethod.foundAuthContextWithState && !analyzedMethod.foundStateVerify && analyzedMethod.foundStatePassedAsParamToPossibleCheck) {
                         reportInterproceduralMethodCall(
                                 javaClass,
-
                                 calledMethodIdentifiers,
                                 analyzedMethod.method);
                     }
                 }
             }
-
-
     }
 
     private void reportInterproceduralMethodCall(JavaClass javaClass,
@@ -186,17 +178,12 @@ public class ImproperStateUsageOidcDetector implements Detector {
     }
 
     private void reportInterproceduralMethodCall(JavaClass javaClass,
-                                                 Method lookupCalledMethod,
-                                                 Method callerMethod,
-                                                 List<Method> methodsWithStateCheck) {
-
-
-        if(!methodsWithStateCheck.contains(lookupCalledMethod)) {
-            bugReporter.reportBug(new BugInstance(this, POSSIBLY_FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
-                    .addClassAndMethod(javaClass, callerMethod));
-            bugReporter.reportBug(new BugInstance(this, POSSIBLY_FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
-                    .addClassAndMethod(javaClass, lookupCalledMethod));
-        }
+                                                 Method locallyCalledMethod,
+                                                 Method callerMethod) {
+        bugReporter.reportBug(new BugInstance(this, POSSIBLY_FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
+                .addClassAndMethod(javaClass, callerMethod));
+        bugReporter.reportBug(new BugInstance(this, POSSIBLY_FORGOT_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
+                .addClassAndMethod(javaClass, locallyCalledMethod));
     }
 
     private void reportInterproceduralMethodCall(JavaClass javaClass,
