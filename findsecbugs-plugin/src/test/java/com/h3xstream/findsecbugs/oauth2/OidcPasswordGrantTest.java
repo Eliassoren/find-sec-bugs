@@ -12,7 +12,7 @@ public class OidcPasswordGrantTest extends BaseDetectorTest{
     public void usingUnsafePasswordGrantTest() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oidc/OidcPasswordGrant")
+                getClassFilePath("testcode/oidc/nimbus/OidcPasswordGrant")
         };
 
         //Run the analysis
