@@ -34,6 +34,8 @@ public class OidcAuthRequestStateUsageRedirect {
     private Properties config;
     private OIDCProviderMetadata providerMetadata;
     private URI callback;
+    private Nonce savedNonce;
+    private State savedState;
     private void processError(AuthenticationResponse response) {
             response.toErrorResponse();
         }
@@ -62,8 +64,8 @@ public class OidcAuthRequestStateUsageRedirect {
             ClientID clientID = new ClientID(config.getProperty("client_id"));
             callback = new URI("https://client.com/callback");
             // Generate state string and nonce to mitigate CSRF
-           // State state = new State();
-            Nonce nonce = new Nonce();
+           // savedState =  new State();
+            // savedNonce = new Nonce();
             AuthenticationRequest req = new AuthenticationRequest(
                     new URI("https://c2id.com/login"),
                     new ResponseType("code"),
@@ -114,7 +116,6 @@ public class OidcAuthRequestStateUsageRedirect {
             if (!response.indicatesSuccess()) {
                 // We got an error response...
                 TokenErrorResponse errorResponse = tokenResponse.toErrorResponse();
-
             }
 
             OIDCTokenResponse successTokenResponse = (OIDCTokenResponse) tokenResponse.toSuccessResponse();
@@ -122,14 +123,21 @@ public class OidcAuthRequestStateUsageRedirect {
             // Get the ID and access token, the server may also return a refresh token
             JWT idToken = successTokenResponse.getOIDCTokens().getIDToken();
 
+            Nonce returnedNonce = Nonce.parse((String)idToken.getJWTClaimsSet().getClaim("nonce"));
+
+            if(!savedNonce.equals(returnedNonce)) {
+                return Response.status(Response.Status.UNAUTHORIZED).entity("Nonce not equal").build();
+            }
             AccessToken accessToken = successTokenResponse.getOIDCTokens().getAccessToken();
             RefreshToken refreshToken = successTokenResponse.getOIDCTokens().getRefreshToken();
+
+
 
             return Response.ok()
                     .entity(successResponse)
                     .build();
 
-        } catch (Exception e) {
+        } catch (NullPointerException | java.text.ParseException e) {
         // Errror handling
         }
         return Response.status(Response.Status.UNAUTHORIZED).build();
