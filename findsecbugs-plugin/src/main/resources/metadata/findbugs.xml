@@ -131,10 +131,10 @@
     <Detector class="com.h3xstream.findsecbugs.wicket.WicketXssComponentDetector" reports="WICKET_XSS1"/>
     <Detector class="com.h3xstream.findsecbugs.file.OverlyPermissiveFilePermissionDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
     <Detector class="com.h3xstream.findsecbugs.file.SuspiciousCommandDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
-    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureDeleteSecretDetector"
+    <Detector class="com.h3xstream.findsecbugs.oidc.InsecureDeleteSecretDetector"
               reports="UNSAFE_DELETE_SECRET_AUTH,UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH"/>
-    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT_OAUTH"/>
-    <Detector class="com.h3xstream.findsecbugs.oauth2.ImproperStateUsageOidcDetector"
+    <Detector class="com.h3xstream.findsecbugs.oidc.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT_OAUTH"/>
+    <Detector class="com.h3xstream.findsecbugs.oidc.ImproperStateUsageOidcDetector"
               reports="FORGOT_VERIFY_OIDC_STATE,POSSIBLY_FORGOT_VERIFY_OIDC_STATE"/>
 
     <BugPattern type="HTTP_PARAMETER_POLLUTION" abbrev="SECHPP" category="SECURITY"/>

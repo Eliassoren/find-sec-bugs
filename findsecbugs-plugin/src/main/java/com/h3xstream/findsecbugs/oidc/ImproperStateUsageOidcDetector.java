@@ -1,8 +1,8 @@
-package com.h3xstream.findsecbugs.oauth2;
+package com.h3xstream.findsecbugs.oidc;
 
 import com.h3xstream.findsecbugs.common.matcher.InvokeMatcherBuilder;
-import com.h3xstream.findsecbugs.oauth2.data.AnalyzedMethodStateUsage;
-import com.h3xstream.findsecbugs.oauth2.data.CalledMethodIdentifiers;
+import com.h3xstream.findsecbugs.oidc.data.AnalyzedMethodStateUsage;
+import com.h3xstream.findsecbugs.oidc.data.CalledMethodIdentifiers;
 import edu.umd.cs.findbugs.*;
 import edu.umd.cs.findbugs.ba.ClassContext;
 import edu.umd.cs.findbugs.ba.Hierarchy;

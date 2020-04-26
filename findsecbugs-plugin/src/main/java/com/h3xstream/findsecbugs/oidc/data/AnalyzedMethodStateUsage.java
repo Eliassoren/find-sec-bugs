@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.oauth2.data;
+package com.h3xstream.findsecbugs.oidc.data;
 
 import org.apache.bcel.classfile.Method;
 

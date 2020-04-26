@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.oauth2.data;
+package com.h3xstream.findsecbugs.oidc.data;
 
 public class CalledMethodIdentifiers {
     public final String className;
