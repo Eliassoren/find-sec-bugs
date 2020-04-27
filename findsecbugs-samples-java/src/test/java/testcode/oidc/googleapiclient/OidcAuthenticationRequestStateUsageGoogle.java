@@ -117,14 +117,13 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
 
 
     // Doesn't add state param. Expect bug.
-    @Path("/login")
+    // @Path("/login")
     public Response exampleAuthenticationRequestForgetAddState(HttpServletRequest request, HttpServletResponse response) {
         try {
             // String state =  nonce();
             //String nonce =  state();
             //request.getSession().setAttribute("state", state);
             //  UUID userid = UUID.randomUUID();
-            // request.getSession().setAttribute("userid", userid));
             Map<String, Object> providerMetadata = discovery();
             authorizationCodeFlow = new AuthorizationCodeFlow.Builder(BearerToken.authorizationHeaderAccessMethod(),
                     new NetHttpTransport(), new MockJsonFactory(),
@@ -151,7 +150,7 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
         return Response.status(Response.Status.UNAUTHORIZED).build();
     }
 
-    @Path("/login")
+    // @Path("/login")
     public Response OK_authenticationRequestAddState(HttpServletRequest request) {
         try {
             String state =  nonce();
@@ -183,7 +182,7 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
     }
 
 
-    @Path("/login")
+    // @Path("/login")
     public Response authenticationRequestNoDiscovery(HttpServletRequest request) {
         try {
             String state =  nonce();

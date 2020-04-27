@@ -6383,29 +6383,13 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECISAUTH">Usage of insecure authorization grant OIDC.</BugCode>
 
-    <Detector class="com.h3xstream.findsecbugs.oidc.ImproperStateUsageOidcDetector">
-        <Details>Looking improper state handling during OpenID Connect Authentication.</Details>
-    </Detector>
-    <BugPattern type="FORGOT_VERIFY_OIDC_STATE">
-        <ShortDescription>Forgot to verify state after authentication request? You must remember to check that state matches.</ShortDescription>
-        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP</LongDescription>
-        <Details>
-            <![CDATA[
-            <p>Remember to check that the state matches!</p>
-            <pre>
-              if(!successResponse.getState().equals(state)) {
-                // Unauthorized
-              }
-            </pre>
-            ]]>
-        </Details>
-    </BugPattern>
-    <BugCode abbrev="SECFVOST">Forgot to check state during OIDC authentication.</BugCode>
 
-    <BugPattern type="POSSIBLY_FORGOT_VERIFY_OIDC_STATE">
-        <ShortDescription>You may have forgotten to verify state after authentication request.</ShortDescription>
-        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP.
-            Is state verified in passed parameter?</LongDescription>
+    <Detector class="com.h3xstream.findsecbugs.oidc.state.MissingCheckStateOidcDetector">
+        <Details>Detecting missing state verification during OpenID Connect Authentication.</Details>
+    </Detector>
+    <BugPattern type="MISSING_VERIFY_OIDC_STATE">
+        <ShortDescription>State verification check is missing in your handling of authorization code flow response from IdP.</ShortDescription>
+        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP.</LongDescription>
         <Details>
             <![CDATA[
             <p>Remember to check that the state matches!</p>
@@ -6417,7 +6401,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
             ]]>
         </Details>
     </BugPattern>
-    <BugCode abbrev="SECPFVOST">Possibly forgot to check state during OIDC authentication state passed method call.</BugCode>
+    <BugCode abbrev="SECVMOS">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
 
 
 
