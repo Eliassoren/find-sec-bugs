@@ -6392,7 +6392,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
         <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP.</LongDescription>
         <Details>
             <![CDATA[
-            <p>Remember to check that the state matches!</p>
+            <p>Remember to check that the state matches to avoid CSRF attacks.</p>
             <pre>
               if(!successResponse.getState().equals(state)) {
                 // Unauthorized
@@ -6402,6 +6402,24 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
         </Details>
     </BugPattern>
     <BugCode abbrev="SECVMOS">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
+
+ <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE">
+        <ShortDescription>State verification check may be missing. State is passed as a parameter to some foreign method.</ShortDescription>
+        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP
+            while handling of authorization code flow response from IdP. </LongDescription>
+        <Details>
+            <![CDATA[
+            <p>Remember to check that the state matches. If the state is not checked locally,
+            make sure it is verified in the location where it is passed.</p>
+            <pre>
+              if(!verifyState(successResponse.getState()) {
+                // Unauthorized
+              }
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECVMOSEXT">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
 
 
 

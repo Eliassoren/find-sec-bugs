@@ -134,7 +134,8 @@
     <Detector class="com.h3xstream.findsecbugs.oidc.InsecureDeleteSecretDetector"
               reports="UNSAFE_DELETE_SECRET_AUTH,UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH"/>
     <Detector class="com.h3xstream.findsecbugs.oidc.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT_OAUTH"/>
-    <Detector class="com.h3xstream.findsecbugs.oidc.state.MissingCheckStateOidcDetector" reports="MISSING_VERIFY_OIDC_STATE"/>
+    <Detector class="com.h3xstream.findsecbugs.oidc.state.MissingCheckStateOidcDetector"
+              reports="MISSING_VERIFY_OIDC_STATE,EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE"/>
 
     <BugPattern type="HTTP_PARAMETER_POLLUTION" abbrev="SECHPP" category="SECURITY"/>
     <BugPattern type="SMTP_HEADER_INJECTION" abbrev="SECSMTP" category="SECURITY"/>
@@ -275,4 +276,5 @@
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH" abbrev="SECUDOSE" category="SECURITY"/>
     <BugPattern type="USING_PASSWORD_GRANT_OAUTH" abbrev="SECISAUTH" category="SECURITY"/>
     <BugPattern type="MISSING_VERIFY_OIDC_STATE" abbrev="SECVMOS" category="SECURITY"/>
+    <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE" abbrev="SECVMOSEXT" category="SECURITY"/>
 </FindbugsPlugin>
