@@ -17,7 +17,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Properties;
 
-public class OidcAuthenticationRequestStateUsage {
+public class OidcAuthenticationRequestStateUsageSample {
     private Properties config;
     private OIDCProviderMetadata providerMetadata;
     private void processError(AuthenticationResponse response) {
@@ -121,7 +121,7 @@ public class OidcAuthenticationRequestStateUsage {
     }
 
     // Doesn't check state. Expect bug.
-    private void stateMatcherHandleNoMatch(AuthenticationSuccessResponse successResponse, State state) {
+    public static void stateMatcherHandleNoMatch(AuthenticationSuccessResponse successResponse, State state) {
         successResponse.toParameters();
     }
 

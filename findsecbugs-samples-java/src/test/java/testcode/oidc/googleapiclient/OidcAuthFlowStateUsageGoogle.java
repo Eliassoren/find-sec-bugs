@@ -21,6 +21,7 @@ import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import sun.security.util.Cache;
 import testcode.android.R;
+import testcode.oidc.nimbus.OidcAuthenticationRequestStateUsageSample;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.servlet.http.HttpServlet;
@@ -41,7 +42,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
 
-public class OidcAuthenticationRequestStateUsageGoogle {
+public class OidcAuthFlowStateUsageGoogle {
     /*
     * Use the authorization code flow to allow the end user to grant your application access to their protected data. The protocol for this flow is specified in the Authorization Code Grant specification.
 
@@ -131,6 +132,7 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
 
     // Doesn't add state param. Expect bug.
     // @Path("/login")
+    @SuppressFBWarnings("SERVLET_PARAMETER")
     public Response exampleAuthenticationRequestForgetAddState(HttpServletRequest request, HttpServletResponse response) {
         try {
             // String state =  nonce();
@@ -164,7 +166,7 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
     }
 
     // @Path("/login")
-
+    @SuppressFBWarnings({"SERVLET_HEADER", "SERVLET_PARAMETER"})
     public Response OK_authenticationRequestAddState(HttpServletRequest request) {
         try {
             providerMetadata = discovery();
@@ -199,14 +201,12 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
 
 
     // @Path("/login")
+    @SuppressFBWarnings("SERVLET_PARAMETER")
     public Response authenticationRequestNoDiscovery(HttpServletRequest request) {
         try {
             String state =  nonce();
             String nonce =  state();
             UUID userid = UUID.randomUUID();
-            request.getSession().setAttribute("state", state);
-            request.getSession().setAttribute("nonce", nonce);
-            request.getSession().setAttribute("userid", userid);
             authorizationCodeFlow = new AuthorizationCodeFlow.Builder(BearerToken.authorizationHeaderAccessMethod(),
                     new NetHttpTransport(), new MockJsonFactory(),
                     new GenericUrl("https://server.example.com/token"),
@@ -252,6 +252,122 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
                 return Response.status(Response.Status.UNAUTHORIZED)
                         .entity("The state does not match").build();
             }
+            String authorizationCode = responseUrl.getCode();
+            TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
+                    .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
+                    .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
+                    .setRedirectUri(redirectUri);
+            IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
+            return validateTokens(idTokenResponse, oidcConfig);
+        } catch (Exception e) {
+            // Error handling
+        }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+    }
+
+    private boolean verifyState(OidcConfig config, String state) {
+        // Other possible case, passing the whole url?
+        return config.state.equals(state);
+    }
+
+    @SuppressFBWarnings("SERVLET_HEADER")
+    public Response OK_callbackCheckStatePassedToOther(HttpServletRequest callbackRequest) {
+        try {
+            UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
+            OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
+            AuthorizationCodeResponseUrl responseUrl = new AuthorizationCodeResponseUrl(callbackRequest.getRequestURI());
+            String error = responseUrl.getError();
+            if(error != null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Authorization failed with error: "+error).build();
+            }
+            // FIXME: no state equals
+            if(!verifyState(oidcConfig, responseUrl.getState())) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The state does not match").build();
+            }
+
+            String authorizationCode = responseUrl.getCode();
+            TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
+                    .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
+                    .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
+                    .setRedirectUri(redirectUri);
+            IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
+            return validateTokens(idTokenResponse, oidcConfig);
+        } catch (Exception e) {
+            // Error handling
+        }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+    }
+
+    @SuppressFBWarnings("SERVLET_HEADER")
+    public Response callbackMissingCheckState(HttpServletRequest callbackRequest) {
+        try {
+            UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
+            OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
+            AuthorizationCodeResponseUrl responseUrl = new AuthorizationCodeResponseUrl(callbackRequest.getRequestURI());
+            String error = responseUrl.getError();
+            if(error != null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Authorization failed with error: "+error).build();
+            }
+            // FIXME: no state equals
+            String authorizationCode = responseUrl.getCode();
+            TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
+                    .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
+                    .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
+                    .setRedirectUri(redirectUri);
+            IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
+            return validateTokens(idTokenResponse, oidcConfig);
+        } catch (Exception e) {
+            // Error handling
+        }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+    }
+
+    private void passStateNoCheck(String state) {
+        int a = state.compareTo("randomstrin");
+    }
+
+    @SuppressFBWarnings("SERVLET_HEADER")
+    public Response callbackMissingCheckStatePassedToOther(HttpServletRequest callbackRequest) {
+        try {
+            UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
+            OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
+            AuthorizationCodeResponseUrl responseUrl = new AuthorizationCodeResponseUrl(callbackRequest.getRequestURI());
+            String error = responseUrl.getError();
+            if(error != null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Authorization failed with error: "+error).build();
+            }
+            // FIXME: no state equals
+            passStateNoCheck(responseUrl.getState());
+            String authorizationCode = responseUrl.getCode();
+            TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
+                    .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
+                    .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
+                    .setRedirectUri(redirectUri);
+            IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
+            return validateTokens(idTokenResponse, oidcConfig);
+        } catch (Exception e) {
+            // Error handling
+        }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+    }
+
+    @SuppressFBWarnings("SERVLET_HEADER")
+    public Response callbackMissingCheckStatePassedForeign(HttpServletRequest callbackRequest) {
+        try {
+            UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
+            OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
+            AuthorizationCodeResponseUrl responseUrl = new AuthorizationCodeResponseUrl(callbackRequest.getRequestURI());
+            String error = responseUrl.getError();
+            if(error != null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Authorization failed with error: "+error).build();
+            }
+            // FIXME: no state equals
+            ForeignPassMethodUtil.passStateNoCheck(responseUrl.getState());
             String authorizationCode = responseUrl.getCode();
             TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
                     .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))

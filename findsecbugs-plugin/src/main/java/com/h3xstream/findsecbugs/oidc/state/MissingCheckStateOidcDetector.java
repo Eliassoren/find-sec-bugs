@@ -11,10 +11,7 @@ import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.h3xstream.findsecbugs.common.matcher.InstructionDSL.invokeInstruction;
 
@@ -23,12 +20,31 @@ public class MissingCheckStateOidcDetector implements Detector {
     private static final String MISSING_VERIFY_OIDC_STATE = "MISSING_VERIFY_OIDC_STATE";
     private static final String EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE = "EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE";
 
-
+    private Map<MethodAnnotation, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheckForeignMethod = new HashMap<>();
+    private Map<CalledMethodIdentifiers, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheckForeignNotFound = new HashMap<>();
+    private Map<Method, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheck = new HashMap<>();
+    JavaClass javaClass;
     private static final InvokeMatcherBuilder
             AUTH_RESPONSE_PARSE = invokeInstruction()
             .atClass("com/nimbusds/openid/connect/sdk/AuthenticationResponseParser")
             .atMethod("parse")
-            .withArgs("(Ljava/net/URI;)Lcom/nimbusds/openid/connect/sdk/AuthenticationResponse;");// TODO: generalize statement. This trigger should be configurable
+            .withArgs("(Ljava/net/URI;)Lcom/nimbusds/openid/connect/sdk/AuthenticationResponse;");
+
+    private static final InvokeMatcherBuilder
+            AUTH_RESPONSE_PARSE_GOOGLE = invokeInstruction()
+            .atClass("com/google/api/client/auth/oauth2/AuthorizationCodeResponseUrl")
+            .atMethod("<init>")
+            .withArgs("(Ljava/lang/String;)V");// TODO: generalize statement. This trigger should be configurable
+
+    private static final InvokeMatcherBuilder
+            GET_STATE_METHOD_NIMBUS = invokeInstruction()
+            .atClass("com/nimbusds/openid/connect/sdk/AuthenticationResponse")
+            .atMethod("getState");
+
+    private static final InvokeMatcherBuilder
+            GET_STATE_METHOD_GOOGLE = invokeInstruction()
+            .atClass("com/google/api/client/auth/oauth2/AuthorizationCodeResponseUrl")
+            .atMethod("getState");
 
     private static final InvokeMatcherBuilder
             STATE_EQUALS_METHOD = invokeInstruction() //
@@ -36,23 +52,76 @@ public class MissingCheckStateOidcDetector implements Detector {
             .atMethod("equals")
             .withArgs("(Ljava/lang/Object;)Z"); // TODO: generalize. More params should be checked. In Googleapi, strings are used. May want to evaluate for certain variable names to be sure.
 
+    private static final InvokeMatcherBuilder
+            STRING_EQUALS_METHOD = invokeInstruction() //
+            .atClass("java/lang/String")
+            .atMethod("equals")
+            .withArgs("(Ljava/lang/Object;)Z");
+    private static final String STATE_VARIABLE_NAME_REGEX = "state"; // TODO: add possible variations
+
+    private static final List<InvokeMatcherBuilder> AUTH_RESPONSE_PARSE_VARIATIONS = Arrays.asList(
+                                                                        AUTH_RESPONSE_PARSE,
+                                                                        AUTH_RESPONSE_PARSE_GOOGLE
+                                                                        );
+
+    private static final List<InvokeMatcherBuilder> GET_STATE_INVOKE_VARIATIONS = Arrays.asList(
+                                                                        GET_STATE_METHOD_NIMBUS,
+                                                                        GET_STATE_METHOD_GOOGLE
+                                                                        );
+
+    private static final List<InvokeMatcherBuilder> STATE_EQUALS_INVOKE_VARIATIONS = Arrays.asList(
+                                                                        STATE_EQUALS_METHOD
+                                                                        );
+
+    private static boolean looksLikeStateVerify(Instruction instruction, ConstantPoolGen cpg, boolean foundGetState) {
+        return (STATE_EQUALS_INVOKE_VARIATIONS.stream().anyMatch(i -> i.matches(instruction, cpg))) // Tightly defined state type
+                || (STRING_EQUALS_METHOD.matches(instruction, cpg) && foundGetState); // String with name
+    }
+
+    private void statePassedAsParam(ConstantPoolGen cpg, InvokeInstruction invokeInstruction, AnalyzedMethodStateUsage analyzedMethodStateUsage) {
+        Method calledMethod = findLocalMethodWithName(javaClass,
+                invokeInstruction.getMethodName(cpg),
+                invokeInstruction.getClassName(cpg));
+        if(calledMethod == null) { // The method called is not in this java class
+            try {
+                JavaClassAndMethod exactMethod = Hierarchy.findExactMethod(invokeInstruction, cpg);
+                MethodAnnotation methodAnnotation = MethodAnnotation.fromXMethod(exactMethod.toXMethod());
+                methodCallersThatShouldHaveStateCheckForeignMethod.put(
+                        methodAnnotation, analyzedMethodStateUsage);
+            } catch (ClassNotFoundException e) {
+                CalledMethodIdentifiers calledMethodIdentifiers = new CalledMethodIdentifiers(
+                        invokeInstruction.getClassName(cpg),
+                        invokeInstruction.getMethodName(cpg),
+                        invokeInstruction.getSignature(cpg)
+                );
+                methodCallersThatShouldHaveStateCheckForeignNotFound.put(
+                        calledMethodIdentifiers,
+                        analyzedMethodStateUsage);
+            }
+        } else {
+            methodCallersThatShouldHaveStateCheck.put(
+                    calledMethod,
+                    analyzedMethodStateUsage);
+        }
+    }
+
     public MissingCheckStateOidcDetector(BugReporter bugReporter) {
         this.bugReporter = bugReporter;
     }
 
     @Override
     public void visitClassContext(ClassContext classContext) {
-        JavaClass javaClass = classContext.getJavaClass();
+
+        javaClass = classContext.getJavaClass();
         boolean foundAuthResponseParse = false; // This must be true to trigger the search for state verification
         boolean foundStateVerify = false; // This must be true in the end to be safe.
         boolean foundStatePassedAsParamToPossibleCheck = false; // We pass state outside of the procedure and need an additional check.
-
+        boolean foundGetState = false; //method based on callback response Method com/google/api/client/auth/oauth2/AuthorizationCodeResponseUrl.getState:()Ljava/lang/String;
         Method[] methods = javaClass.getMethods();
         List<Method> methodsWithStateCheck = new ArrayList<>();
-        Map<MethodAnnotation, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheckForeignMethod = new HashMap<>();
-        Map<CalledMethodIdentifiers, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheckForeignNotFound = new HashMap<>();
-        Map<Method, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheck = new HashMap<>();
-
+        methodCallersThatShouldHaveStateCheckForeignMethod = new HashMap<>();
+        methodCallersThatShouldHaveStateCheckForeignNotFound = new HashMap<>();
+        methodCallersThatShouldHaveStateCheck = new HashMap<>();
 
         // Call to a method where state param is called, and caller.
 
@@ -69,59 +138,37 @@ public class MissingCheckStateOidcDetector implements Detector {
 
             for (InstructionHandle instructionHandle : methodGen.getInstructionList()) {
                 Instruction instruction = instructionHandle.getInstruction();
-                if (instruction instanceof INVOKESTATIC && AUTH_RESPONSE_PARSE.matches(instruction, cpg)) {
-                    foundAuthResponseParse = true;
-                } else if (instruction instanceof INVOKESPECIAL) {
-                    InvokeInstruction invokeInstruction = (InvokeInstruction) instruction;
+                if(!(instruction instanceof InvokeInstruction)) {
+                    continue;
+                }
+                InvokeInstruction invokeInstruction = (InvokeInstruction) instruction;
 
-                    INVOKESPECIAL invokespecial = (INVOKESPECIAL) instruction;
-                    if(invokespecial.getSignature(cpg).contains("Lcom/nimbusds/oauth2/sdk/id/State;") &&
-                        // Any other reference where state is passed than AuthenticationResponse assumed to be possible verifier.
-                        !invokespecial.getSignature(cpg).endsWith("Lcom/nimbusds/openid/connect/sdk/AuthenticationRequest;")) {
-                    foundStatePassedAsParamToPossibleCheck = true;
-                    Method calledMethod = findMethodWithName(javaClass, invokespecial.getMethodName(cpg));
-                    if(calledMethod == null) { // The method called is not in this java class
-                        try {
-                            JavaClassAndMethod exactMethod = Hierarchy.findExactMethod(invokeInstruction, cpg);
-                            MethodAnnotation methodAnnotation = MethodAnnotation.fromXMethod(exactMethod.toXMethod());
-                            methodCallersThatShouldHaveStateCheckForeignMethod.put(
-                                    methodAnnotation, new AnalyzedMethodStateUsage(m,
-                                            foundAuthResponseParse,
-                                            foundStateVerify,
-                                            foundStatePassedAsParamToPossibleCheck
-                                    ));
-                        } catch (ClassNotFoundException e) {
-                            CalledMethodIdentifiers calledMethodIdentifiers = new CalledMethodIdentifiers(
-                                    invokespecial.getClassName(cpg),
-                                    invokespecial.getMethodName(cpg),
-                                    invokespecial.getSignature(cpg)
-                            );
-                            methodCallersThatShouldHaveStateCheckForeignNotFound.put(
-                                    calledMethodIdentifiers,
-                                    new AnalyzedMethodStateUsage(m,
-                                            foundAuthResponseParse,
-                                            foundStateVerify,
-                                            foundStatePassedAsParamToPossibleCheck
-                                    ));
-                            }
-                        } else {
-                        methodCallersThatShouldHaveStateCheck.put(
-                                calledMethod,
-                                new AnalyzedMethodStateUsage(m,
-                                        foundAuthResponseParse,
-                                        foundStateVerify,
-                                        foundStatePassedAsParamToPossibleCheck
-                                ));
-                        }
-                    }
-                } else if (instruction instanceof INVOKEVIRTUAL) {
-                    if (STATE_EQUALS_METHOD.matches(instruction, cpg)) {
-                        foundStateVerify = true;
-                        methodsWithStateCheck.add(m);
-                    }
+                if(AUTH_RESPONSE_PARSE_VARIATIONS.stream().anyMatch(i -> i.matches(instruction, cpg))) {
+                    foundAuthResponseParse = true;
+                } else if(GET_STATE_INVOKE_VARIATIONS.stream().anyMatch(i -> i.matches(instruction, cpg))) {
+                    foundGetState = true;
+                } else if(looksLikeStateVerify(instruction, cpg, foundGetState)) {
+                    foundStateVerify = true;
+                    methodsWithStateCheck.add(m);
+                }
+
+               if((((invokeInstruction.getSignature(cpg).contains("Lcom/nimbusds/oauth2/sdk/id/State;") // TODO: pass to "lookLikePassedAsParam" and generalize
+                       && !invokeInstruction.getSignature(cpg).endsWith("Lcom/nimbusds/oauth2/sdk/id/State;"))
+                       || invokeInstruction.getSignature(cpg).contains("Ljava/lang/String;"))
+                       && (!invokeInstruction.getSignature(cpg).endsWith("Lcom/nimbusds/openid/connect/sdk/AuthenticationRequest;")
+                       || !invokeInstruction.getSignature(cpg).endsWith("Lcom/google/api/client/auth/oauth2/AuthorizationCodeRequestUrl;"))
+                       && (invokeInstruction.getReturnType(cpg).equals(Type.BOOLEAN)
+                       || invokeInstruction.getReturnType(cpg).equals(Type.VOID)))){
+                   // FIXME: we must ensure that this looks for something that may do "verify", either by throwing or returning boolean. FP risk: passing on and continuing verify
+                    // TODO: look at logic. Null now.
+                   foundStatePassedAsParamToPossibleCheck = true;
+                   statePassedAsParam(cpg, invokeInstruction, new AnalyzedMethodStateUsage(m,
+                           foundAuthResponseParse,
+                           foundStateVerify,
+                           true
+                   ));
                 }
             }
-
             if (foundAuthResponseParse && !foundStateVerify && !foundStatePassedAsParamToPossibleCheck) {
                 bugReporter.reportBug(new BugInstance(this, MISSING_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
                         .addClassAndMethod(javaClass, m));
@@ -197,14 +244,17 @@ public class MissingCheckStateOidcDetector implements Detector {
 
     }
 
-    private Method findMethodWithName(JavaClass javaClass, String methodName) {
-        for(Method m : javaClass.getMethods()) {
-            if(methodName.equals(m.getName())) {
-                return m;
-            }
+    private Method findLocalMethodWithName(JavaClass javaClass, String methodName, String methodClassName) {
+        if(!methodClassName.equals(javaClass.getClassName())) {
+            return null;
         }
-        return null;
+        return Arrays.stream(javaClass.getMethods())
+                .filter(m -> m.getName().equals(methodName))
+                .findAny()
+                .orElse(null);
     }
+
+
 
     @Override
     public void report() {

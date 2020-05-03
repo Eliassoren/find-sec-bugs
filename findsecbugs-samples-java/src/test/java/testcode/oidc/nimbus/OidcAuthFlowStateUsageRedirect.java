@@ -137,6 +137,66 @@ public class OidcAuthFlowStateUsageRedirect {
         }
     }
 
+    @SuppressFBWarnings(value = {"SERVLET_HEADER"})
+    public Response callBackMissingCheckStatePassedParam(HttpServletRequest httpAuthorizationCallback) {
+        try {
+            AuthenticationResponse response;
+            try {
+                response = AuthenticationResponseParser.parse(new URI(httpAuthorizationCallback.getRequestURI()));
+            } catch (ParseException | URISyntaxException e) {
+                // Handle parse errors. Control flow must be broken here..
+                throw new SecurityException("Failed to parse auth response");
+            }
+            // This block is STEP 2 in flow chart.
+            if (response instanceof AuthenticationErrorResponse) {
+                // process error
+                processError(response);
+                return Response.status(Response.Status.UNAUTHORIZED).entity("Error during authorization code flow").build();
+            }
+            AuthenticationSuccessResponse
+                    successResponse = Objects.requireNonNull(response).toSuccessResponse();
+            String appuuid = UUID.fromString(httpAuthorizationCallback.getHeader("appuuid")).toString();
+            OidcConfig oidcConfig = (OidcConfig)cache.get(appuuid);
+            // FIXME: security error, missing state check
+            stateMatcherHandleNoMatch(successResponse, oidcConfig.state);
+            AuthorizationCode authorizationCode = successResponse.getAuthorizationCode();
+            return OK_tokenRequestValidateIdToken(oidcConfig, authorizationCode);
+        } catch (NullPointerException | ClassCastException e) {
+            // Error handling
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+    }
+
+    @SuppressFBWarnings(value = {"SERVLET_HEADER"})
+    public Response callBackMissingCheckStatePassedParamForeign(HttpServletRequest httpAuthorizationCallback) {
+        try {
+            AuthenticationResponse response;
+            try {
+                response = AuthenticationResponseParser.parse(new URI(httpAuthorizationCallback.getRequestURI()));
+            } catch (ParseException | URISyntaxException e) {
+                // Handle parse errors. Control flow must be broken here..
+                throw new SecurityException("Failed to parse auth response");
+            }
+            // This block is STEP 2 in flow chart.
+            if (response instanceof AuthenticationErrorResponse) {
+                // process error
+                processError(response);
+                return Response.status(Response.Status.UNAUTHORIZED).entity("Error during authorization code flow").build();
+            }
+            AuthenticationSuccessResponse
+                    successResponse = Objects.requireNonNull(response).toSuccessResponse();
+            String appuuid = UUID.fromString(httpAuthorizationCallback.getHeader("appuuid")).toString();
+            OidcConfig oidcConfig = (OidcConfig)cache.get(appuuid);
+            // FIXME: security error, missing state check
+            OidcAuthenticationRequestStateUsageSample.stateMatcherHandleNoMatch(successResponse, oidcConfig.state);
+            AuthorizationCode authorizationCode = successResponse.getAuthorizationCode();
+            return OK_tokenRequestValidateIdToken(oidcConfig, authorizationCode);
+        } catch (NullPointerException | ClassCastException e) {
+            // Error handling
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+    }
+
    // @Path("/login")
     // Step 1
     @SuppressFBWarnings("SERVLET_PARAMETER")
@@ -242,7 +302,7 @@ public class OidcAuthFlowStateUsageRedirect {
 
 
     // Doesn't check state. Expect bug.
-  /*  private void stateMatcherHandleNoMatch(AuthenticationSuccessResponse successResponse, State state) {
+    private void stateMatcherHandleNoMatch(AuthenticationSuccessResponse successResponse, State state) {
         successResponse.toParameters();
     }
 
@@ -251,20 +311,13 @@ public class OidcAuthFlowStateUsageRedirect {
     private void stateMatcherHandle(AuthenticationSuccessResponse successResponse,State state) {
         if(!successResponse.getState().equals(state)) {
             // Unauthorized
-           return;
+            throw new SecurityException("EE");
         }
         successResponse.toParameters();
     }
 
 
 
-    private Response stateMatcherHandleResponse(AuthenticationSuccessResponse successResponse, State state) {
-        if(!successResponse.getState().equals(state)) {
-            // Unauthorized
-            return Response.status(Response.Status.UNAUTHORIZED).build();
-        }
-        return Response.ok().build();
-    }*/
 
 
 }

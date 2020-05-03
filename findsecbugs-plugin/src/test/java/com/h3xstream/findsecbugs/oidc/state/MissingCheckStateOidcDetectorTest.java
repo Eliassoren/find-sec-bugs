@@ -12,7 +12,8 @@ public class MissingCheckStateOidcDetectorTest extends BaseDetectorTest {
     public void forgotToCheckStateTest() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oidc/nimbus/OidcAuthFlowStateUsageRedirect")
+                getClassFilePath("testcode/oidc/nimbus/OidcAuthFlowStateUsageRedirect"),
+                getClassFilePath("testcode/oidc/googleapiclient/OidcAuthFlowStateUsageGoogle")
         };
 
         //Run the analysis
@@ -26,6 +27,15 @@ public class MissingCheckStateOidcDetectorTest extends BaseDetectorTest {
                         .bugType("MISSING_VERIFY_OIDC_STATE")
                         .inClass("OidcAuthFlowStateUsageRedirect")
                         .inMethod("callBackMissingCheckState")
+                        .build()
+        );
+
+        //Assertions
+        verify(reporter).doReportBug(
+                bugDefinition()
+                        .bugType("MISSING_VERIFY_OIDC_STATE")
+                        .inClass("OidcAuthFlowStateUsageRedirect")
+                        .inMethod("callBackMissingCheckStatePassedParam")
                         .build()
         );
 
