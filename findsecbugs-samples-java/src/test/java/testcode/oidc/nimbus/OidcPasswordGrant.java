@@ -13,7 +13,7 @@ public class OidcPasswordGrant {
             Secret password = new Secret(body.get("password"));
             AuthorizationGrant passwordGrant =
                     new ResourceOwnerPasswordCredentialsGrant(username, password);
-            tokenRequest(passwordGrant); // abstraction for actually building request
+            tokenRequest(passwordGrant);
     }
 
     private void tokenRequest(AuthorizationGrant passwordGrant) {

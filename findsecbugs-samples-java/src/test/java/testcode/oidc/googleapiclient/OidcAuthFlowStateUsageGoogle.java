@@ -3,6 +3,7 @@ package testcode.oidc.googleapiclient;
 import com.google.api.client.auth.oauth2.*;
 import com.google.api.client.auth.openidconnect.IdToken;
 import com.google.api.client.auth.openidconnect.IdTokenResponse;
+import com.google.api.client.auth.openidconnect.IdTokenVerifier;
 import com.google.api.client.http.BasicAuthentication;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
@@ -16,6 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import com.nimbusds.oauth2.sdk.ParseException;
 
 
+import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
@@ -129,6 +131,107 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
         return nonce();
     }
 
+    private boolean verifyState(OidcConfig config, String state) {
+        // Other possible case, passing the whole url?
+        return config.state.equals(state);
+    }
+    // --------------------------- Good code ---------------------------------------------
+
+    // @Path("/login")
+    @SuppressFBWarnings({"SERVLET_HEADER", "SERVLET_PARAMETER"})
+    public Response OK_authenticationRequestAddState(HttpServletRequest request) {
+        try {
+            providerMetadata = discovery();
+            String state =  nonce();
+            String nonce =  state();
+            UUID uuid = UUID.randomUUID();
+            cache.put(uuid.toString(), new OidcConfig( state,
+                    nonce,
+                    uuid
+            ));
+            authorizationCodeFlow = new AuthorizationCodeFlow.Builder(BearerToken.authorizationHeaderAccessMethod(),
+                    new NetHttpTransport(), new MockJsonFactory(),
+                    new GenericUrl((String)providerMetadata.get("token_endpoint")), // "https://server.example.com/token"
+                    new BasicAuthentication(config.getProperty("clientId"), config.getProperty("clientSecret")),
+                    config.getProperty("clientId"),
+                    (String)providerMetadata.get("authorization_endpoint")//"https://server.example.com/authorize"
+            ).build();
+            requestUrl = authorizationCodeFlow
+                    .newAuthorizationUrl()
+                    .setResponseTypes(Collections.singleton("code"))
+                    .setScopes(Arrays.asList("openid", "email", "profile", "address"))
+                    .setRedirectUri("https://client.com/callback")
+                    .set("login_hint", request.getParameter("login_hint"))
+                    .setState(state)
+                    .set("nonce", nonce);
+            return Response.seeOther(requestUrl.toURI()).header("appuuid", uuid).build();
+        } catch (Exception e) {
+            // Error handling
+        }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+    }
+
+
+    @SuppressFBWarnings("SERVLET_HEADER")
+    public Response OK_callbackCheckState(HttpServletRequest callbackRequest) {
+        try {
+            UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
+            OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
+            AuthorizationCodeResponseUrl responseUrl = new AuthorizationCodeResponseUrl(callbackRequest.getRequestURI());
+            String error = responseUrl.getError();
+            if(error != null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Authorization failed with error: "+error).build();
+            }
+            if(oidcConfig.state.equals(responseUrl.getState())) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The state does not match").build();
+            }
+            String authorizationCode = responseUrl.getCode();
+            TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
+                    .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
+                    .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
+                    .setRedirectUri(redirectUri);
+            IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
+            return validateTokens(idTokenResponse, oidcConfig);
+        } catch (Exception e) {
+            // Error handling
+        }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+    }
+
+
+
+    @SuppressFBWarnings("SERVLET_HEADER")
+    public Response OK_callbackCheckStatePassedToOther(HttpServletRequest callbackRequest) {
+        try {
+            UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
+            OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
+            AuthorizationCodeResponseUrl responseUrl = new AuthorizationCodeResponseUrl(callbackRequest.getRequestURI());
+            String error = responseUrl.getError();
+            if(error != null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Authorization failed with error: "+error).build();
+            }
+
+            if(!verifyState(oidcConfig, responseUrl.getState())) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The state does not match").build();
+            }
+
+            String authorizationCode = responseUrl.getCode();
+            TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
+                    .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
+                    .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
+                    .setRedirectUri(redirectUri);
+            IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
+            return validateTokens(idTokenResponse, oidcConfig);
+        } catch (Exception e) {
+            // Error handling
+        }
+        return Response.status(Response.Status.UNAUTHORIZED).build();
+    }
+    // ------------------------------ Bad code expecting reports ---------------------------------------
 
     // Doesn't add state param. Expect bug.
     // @Path("/login")
@@ -165,39 +268,6 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
         return Response.status(Response.Status.UNAUTHORIZED).build();
     }
 
-    // @Path("/login")
-    @SuppressFBWarnings({"SERVLET_HEADER", "SERVLET_PARAMETER"})
-    public Response OK_authenticationRequestAddState(HttpServletRequest request) {
-        try {
-            providerMetadata = discovery();
-            String state =  nonce();
-            String nonce =  state();
-            UUID uuid = UUID.randomUUID();
-            cache.put(uuid.toString(), new OidcConfig( state,
-                                                       nonce,
-                                                        uuid
-            ));
-            authorizationCodeFlow = new AuthorizationCodeFlow.Builder(BearerToken.authorizationHeaderAccessMethod(),
-                    new NetHttpTransport(), new MockJsonFactory(),
-                    new GenericUrl((String)providerMetadata.get("token_endpoint")), // "https://server.example.com/token"
-                    new BasicAuthentication(config.getProperty("clientId"), config.getProperty("clientSecret")),
-                    config.getProperty("clientId"),
-                    (String)providerMetadata.get("authorization_endpoint")//"https://server.example.com/authorize"
-            ).build();
-            requestUrl = authorizationCodeFlow
-                    .newAuthorizationUrl()
-                    .setResponseTypes(Collections.singleton("code"))
-                    .setScopes(Arrays.asList("openid", "email", "profile", "address"))
-                    .setRedirectUri("https://client.com/callback")
-                    .set("login_hint", request.getParameter("login_hint"))
-                    .setState(state)
-                    .set("nonce", nonce);
-            return Response.seeOther(requestUrl.toURI()).header("appuuid", uuid).build();
-        } catch (Exception e) {
-            // Error handling
-        }
-        return Response.status(Response.Status.UNAUTHORIZED).build();
-    }
 
 
     // @Path("/login")
@@ -236,69 +306,7 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
        - Verify that the expiry time (exp claim) of the ID token has not passed. X
        - If you specified a hd parameter value in the request, verify that the ID token has a hd claim that matches an accepted G Suite hosted domain.*/
 
-    @SuppressFBWarnings("SERVLET_HEADER")
-    public Response OK_callbackCheckState(HttpServletRequest callbackRequest) {
-        try {
-            String clientId = config.getProperty("clientId");
-            UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
-            OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
-            AuthorizationCodeResponseUrl responseUrl = new AuthorizationCodeResponseUrl(callbackRequest.getRequestURI());
-            String error = responseUrl.getError();
-            if(error != null) {
-                return Response.status(Response.Status.UNAUTHORIZED)
-                        .entity("Authorization failed with error: "+error).build();
-            }
-            if(oidcConfig.state.equals(responseUrl.getState())) {
-                return Response.status(Response.Status.UNAUTHORIZED)
-                        .entity("The state does not match").build();
-            }
-            String authorizationCode = responseUrl.getCode();
-            TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
-                    .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
-                    .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
-                    .setRedirectUri(redirectUri);
-            IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
-            return validateTokens(idTokenResponse, oidcConfig);
-        } catch (Exception e) {
-            // Error handling
-        }
-        return Response.status(Response.Status.UNAUTHORIZED).build();
-    }
 
-    private boolean verifyState(OidcConfig config, String state) {
-        // Other possible case, passing the whole url?
-        return config.state.equals(state);
-    }
-
-    @SuppressFBWarnings("SERVLET_HEADER")
-    public Response OK_callbackCheckStatePassedToOther(HttpServletRequest callbackRequest) {
-        try {
-            UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
-            OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
-            AuthorizationCodeResponseUrl responseUrl = new AuthorizationCodeResponseUrl(callbackRequest.getRequestURI());
-            String error = responseUrl.getError();
-            if(error != null) {
-                return Response.status(Response.Status.UNAUTHORIZED)
-                        .entity("Authorization failed with error: "+error).build();
-            }
-            // FIXME: no state equals
-            if(!verifyState(oidcConfig, responseUrl.getState())) {
-                return Response.status(Response.Status.UNAUTHORIZED)
-                        .entity("The state does not match").build();
-            }
-
-            String authorizationCode = responseUrl.getCode();
-            TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
-                    .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
-                    .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
-                    .setRedirectUri(redirectUri);
-            IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
-            return validateTokens(idTokenResponse, oidcConfig);
-        } catch (Exception e) {
-            // Error handling
-        }
-        return Response.status(Response.Status.UNAUTHORIZED).build();
-    }
 
     @SuppressFBWarnings("SERVLET_HEADER")
     public Response callbackMissingCheckState(HttpServletRequest callbackRequest) {
@@ -374,6 +382,7 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
                     .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
                     .setRedirectUri(redirectUri);
             IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
+
             return validateTokens(idTokenResponse, oidcConfig);
         } catch (Exception e) {
             // Error handling

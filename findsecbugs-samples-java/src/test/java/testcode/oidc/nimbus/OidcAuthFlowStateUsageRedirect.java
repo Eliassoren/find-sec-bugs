@@ -25,7 +25,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 
-@SuppressFBWarnings("DLS_DEAD_LOCAL_STORE")
 public class OidcAuthFlowStateUsageRedirect {
 
     private Properties config;
