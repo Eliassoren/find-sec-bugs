@@ -2,6 +2,7 @@ package testcode.oauth2;
 
 import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.util.StringUtils;
+import testcode.oauth2.otherexamples.AuthResource;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;

@@ -1,4 +1,4 @@
-package testcode.oauth2;
+package testcode.oauth2.otherexamples;
 
 
 import com.nimbusds.jose.JWSAlgorithm;
@@ -70,7 +70,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     private IDTokenValidator userTokenValidator() throws MalformedURLException {
-        String baseUrl = "https://organization.com/user"; // config.getOpenAMBaseUrl();
+        String baseUrl = "https://organization.com/user";
         Issuer iss = new Issuer(baseUrl);
         ClientID clientID = new ClientID("OauthClientIdSample"); // config.getOAuthClientId()
         JWSAlgorithm jwsAlg = JWSAlgorithm.RS256;
@@ -98,9 +98,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     private Set<String> getOrganizationroles(IDTokenClaimsSet jwt) {
-        JSONArray svvroles = jwt.getClaim("orgroles", JSONArray.class);
-        if(svvroles == null) return emptySet();
-        return svvroles
+        JSONArray orgroles = jwt.getClaim("orgroles", JSONArray.class);
+        if(orgroles == null) return emptySet();
+        return orgroles
                 .stream()
                 .map(String.class::cast)
                 .collect(toSet());

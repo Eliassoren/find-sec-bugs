@@ -133,7 +133,10 @@
     <Detector class="com.h3xstream.findsecbugs.file.SuspiciousCommandDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
     <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureDeleteSecretDetector"
               reports="UNSAFE_DELETE_SECRET_AUTH,UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH"/>
-    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT"/>
+    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT_OAUTH"/>
+    <Detector class="com.h3xstream.findsecbugs.oauth2.ImproperStateUsageOidcDetector"
+              reports="FORGOT_VERIFY_OIDC_STATE,POSSIBLY_FORGOT_VERIFY_OIDC_STATE"/>
+
     <BugPattern type="HTTP_PARAMETER_POLLUTION" abbrev="SECHPP" category="SECURITY"/>
     <BugPattern type="SMTP_HEADER_INJECTION" abbrev="SECSMTP" category="SECURITY"/>
     <BugPattern type="FORMAT_STRING_MANIPULATION" abbrev="SECFSM" category="SECURITY"/>
@@ -271,5 +274,7 @@
     <BugPattern type="OVERLY_PERMISSIVE_FILE_PERMISSION" abbrev="SECOPFP" category="SECURITY"/>
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH" abbrev="SECUDOS" category="SECURITY"/>
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH" abbrev="SECUDOSE" category="SECURITY"/>
-    <BugPattern type="USING_PASSWORD_GRANT" abbrev="SECISAUTH" category="SECURITY"/>
+    <BugPattern type="USING_PASSWORD_GRANT_OAUTH" abbrev="SECISAUTH" category="SECURITY"/>
+    <BugPattern type="FORGOT_VERIFY_OIDC_STATE" abbrev="SECFVOST" category="SECURITY"/>
+    <BugPattern type="POSSIBLY_FORGOT_VERIFY_OIDC_STATE" abbrev="SECPFVOST" category="SECURITY"/>
 </FindbugsPlugin>

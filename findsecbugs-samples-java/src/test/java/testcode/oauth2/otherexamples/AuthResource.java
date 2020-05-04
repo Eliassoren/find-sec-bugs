@@ -1,4 +1,4 @@
-package testcode.oauth2;
+package testcode.oauth2.otherexamples;
 
 import com.nimbusds.oauth2.sdk.*;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
@@ -121,7 +121,7 @@ public class AuthResource {
             URI callbackURI = new URI("https://client.com/callback");
             // Generate random state string and nonce for pairing the response to the request
             State state = new State();
-            // Nonce nonce = new Nonce();
+            Nonce nonce = new Nonce();
             AuthenticationRequest req = new AuthenticationRequest(
                     new URI("https://c2id.com/login"),
                     new ResponseType("code"),

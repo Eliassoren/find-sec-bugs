@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.*;
+import testcode.oauth2.otherexamples.AuthResource;
 
 import java.io.IOException;
 import java.net.URI;
@@ -21,7 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 
-    public class OIDCTestCases {
+    public class OidcTestCases {
 
         static SecureRandom secureRandomGenerator;
         static AuthResource.Config config;
