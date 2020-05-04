@@ -49,6 +49,9 @@ public class ServletEndpointDetector extends OpcodeStackDetector {
 
     @Override
     public void sawOpcode(int seen) {
+        // TODO: adjust for false positive
+        // With current state this captures all usage of servlets. Hence, if we make detectors using servlet code, this
+        // will just trigger on any of that, not allowing to detect other bugs. We need a stricter filter, more signs of taint.
 
         //All call to ServletRequest
         if (seen == Const.INVOKEINTERFACE && (getClassConstantOperand().equals("javax/servlet/ServletRequest") ||
@@ -106,5 +109,8 @@ public class ServletEndpointDetector extends OpcodeStackDetector {
                 }
             }
         }
+
     }
+
+
 }

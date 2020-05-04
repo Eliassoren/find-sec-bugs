@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.oauth2;
+package com.h3xstream.findsecbugs.oidc;
 
 import com.h3xstream.findbugs.test.BaseDetectorTest;
 import com.h3xstream.findbugs.test.EasyBugReporter;
@@ -14,7 +14,7 @@ public class InsecureDeleteSecretTest extends BaseDetectorTest {
     public void unsafeDeleteSecretTest() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oauth2/InsecureDeleteSecret")
+                getClassFilePath("testcode/oidc/nimbus/InsecureDeleteSecret")
         };
 
         //Run the analysis

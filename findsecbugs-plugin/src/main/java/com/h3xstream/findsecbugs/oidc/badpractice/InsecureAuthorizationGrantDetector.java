@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.oauth2;
+package com.h3xstream.findsecbugs.oidc.badpractice;
 
 import edu.umd.cs.findbugs.BugInstance;
 import edu.umd.cs.findbugs.BugReporter;

@@ -6309,7 +6309,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECOPFP">Overly permissive file permission</BugCode>
 
-    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureDeleteSecretDetector">
+    <Detector class="com.h3xstream.findsecbugs.oidc.InsecureDeleteSecretDetector">
         <Details>Looking for unsafe flows for Oauth usage of secrets and blacklists</Details>
     </Detector>
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH">
@@ -6351,7 +6351,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECUDOSE">Unsafe delete of secret in exception path.</BugCode>
 
-    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureAuthorizationGrantDetector">
+    <Detector class="com.h3xstream.findsecbugs.oidc.badpractice.InsecureAuthorizationGrantDetector">
         <Details>Looking usage of disallowed authorization grant usage according to the new OAuth standard</Details>
     </Detector>
     <BugPattern type="USING_PASSWORD_GRANT_OAUTH">
@@ -6383,32 +6383,16 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECISAUTH">Usage of insecure authorization grant OIDC.</BugCode>
 
-    <Detector class="com.h3xstream.findsecbugs.oauth2.ImproperStateUsageOidcDetector">
-        <Details>Looking improper state handling during OpenID Connect Authentication.</Details>
-    </Detector>
-    <BugPattern type="FORGOT_VERIFY_OIDC_STATE">
-        <ShortDescription>Forgot to verify state after authentication request? You must remember to check that state matches.</ShortDescription>
-        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP</LongDescription>
-        <Details>
-            <![CDATA[
-            <p>Remember to check that the state matches!</p>
-            <pre>
-              if(!successResponse.getState().equals(state)) {
-                // Unauthorized
-              }
-            </pre>
-            ]]>
-        </Details>
-    </BugPattern>
-    <BugCode abbrev="SECFVOST">Forgot to check state during OIDC authentication.</BugCode>
 
-    <BugPattern type="POSSIBLY_FORGOT_VERIFY_OIDC_STATE">
-        <ShortDescription>You may have forgotten to verify state after authentication request.</ShortDescription>
-        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP.
-            Is state verified in passed parameter?</LongDescription>
+    <Detector class="com.h3xstream.findsecbugs.oidc.state.MissingCheckStateOidcDetector">
+        <Details>Detecting missing state verification during OpenID Connect Authentication.</Details>
+    </Detector>
+    <BugPattern type="MISSING_VERIFY_OIDC_STATE">
+        <ShortDescription>State verification check is missing in your handling of authorization code flow response from IdP.</ShortDescription>
+        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP.</LongDescription>
         <Details>
             <![CDATA[
-            <p>Remember to check that the state matches!</p>
+            <p>Remember to check that the state matches to avoid CSRF attacks.</p>
             <pre>
               if(!successResponse.getState().equals(state)) {
                 // Unauthorized
@@ -6417,7 +6401,25 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
             ]]>
         </Details>
     </BugPattern>
-    <BugCode abbrev="SECPFVOST">Possibly forgot to check state during OIDC authentication state passed method call.</BugCode>
+    <BugCode abbrev="SECVMOS">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
+
+ <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE">
+        <ShortDescription>State verification check may be missing. State is passed as a parameter to some foreign method.</ShortDescription>
+        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP
+            while handling of authorization code flow response from IdP. </LongDescription>
+        <Details>
+            <![CDATA[
+            <p>Remember to check that the state matches. If the state is not checked locally,
+            make sure it is verified in the location where it is passed.</p>
+            <pre>
+              if(!verifyState(successResponse.getState()) {
+                // Unauthorized
+              }
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECVMOSEXT">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
 
 
 

@@ -1,4 +1,4 @@
-package testcode.oauth2.otherexamples;
+package testcode.oidc.otherexamples;
 
 import com.nimbusds.oauth2.sdk.*;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;

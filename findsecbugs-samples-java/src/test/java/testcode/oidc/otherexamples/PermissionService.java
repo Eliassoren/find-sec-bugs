@@ -1,4 +1,4 @@
-package testcode.oauth2.otherexamples;
+package testcode.oidc.otherexamples;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;

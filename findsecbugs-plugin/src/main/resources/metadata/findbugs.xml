@@ -131,11 +131,11 @@
     <Detector class="com.h3xstream.findsecbugs.wicket.WicketXssComponentDetector" reports="WICKET_XSS1"/>
     <Detector class="com.h3xstream.findsecbugs.file.OverlyPermissiveFilePermissionDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
     <Detector class="com.h3xstream.findsecbugs.file.SuspiciousCommandDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
-    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureDeleteSecretDetector"
+    <Detector class="com.h3xstream.findsecbugs.oidc.InsecureDeleteSecretDetector"
               reports="UNSAFE_DELETE_SECRET_AUTH,UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH"/>
-    <Detector class="com.h3xstream.findsecbugs.oauth2.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT_OAUTH"/>
-    <Detector class="com.h3xstream.findsecbugs.oauth2.ImproperStateUsageOidcDetector"
-              reports="FORGOT_VERIFY_OIDC_STATE,POSSIBLY_FORGOT_VERIFY_OIDC_STATE"/>
+    <Detector class="com.h3xstream.findsecbugs.oidc.badpractice.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT_OAUTH"/>
+    <Detector class="com.h3xstream.findsecbugs.oidc.state.MissingCheckStateOidcDetector"
+              reports="MISSING_VERIFY_OIDC_STATE,EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE"/>
 
     <BugPattern type="HTTP_PARAMETER_POLLUTION" abbrev="SECHPP" category="SECURITY"/>
     <BugPattern type="SMTP_HEADER_INJECTION" abbrev="SECSMTP" category="SECURITY"/>
@@ -275,6 +275,6 @@
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH" abbrev="SECUDOS" category="SECURITY"/>
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH" abbrev="SECUDOSE" category="SECURITY"/>
     <BugPattern type="USING_PASSWORD_GRANT_OAUTH" abbrev="SECISAUTH" category="SECURITY"/>
-    <BugPattern type="FORGOT_VERIFY_OIDC_STATE" abbrev="SECFVOST" category="SECURITY"/>
-    <BugPattern type="POSSIBLY_FORGOT_VERIFY_OIDC_STATE" abbrev="SECPFVOST" category="SECURITY"/>
+    <BugPattern type="MISSING_VERIFY_OIDC_STATE" abbrev="SECVMOS" category="SECURITY"/>
+    <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE" abbrev="SECVMOSEXT" category="SECURITY"/>
 </FindbugsPlugin>
