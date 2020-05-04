@@ -1,4 +1,4 @@
-package testcode.oidc.googleapiclient;
+package testcode.oidc.util;
 
 public class ForeignPassMethodUtil {
     public static void passStateNoCheck(String state) {

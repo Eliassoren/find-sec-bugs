@@ -15,6 +15,8 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import sun.security.util.Cache;
+import testcode.oidc.util.ForeignPassMethodUtil;
+import testcode.oidc.util.googleapiclient.OidcConfig;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.servlet.http.HttpServletRequest;
@@ -30,7 +32,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
 
-public class OidcAuthFlowStateUsageGoogle {
+public class OidcAuthFlowCompleteExampleGoogle {
     /*
     * Use the authorization code flow to allow the end user to grant your application access to their protected data. The protocol for this flow is specified in the Authorization Code Grant specification.
 
@@ -53,16 +55,6 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
     private String redirectUri = "https://client.com/callback";
     SecureRandom secureRandom;
 
-    private class OidcConfig {
-        public final String state;
-        public final String nonce;
-        public final UUID appuuid;
-        public OidcConfig(String state, String nonce, UUID appuuid) {
-            this.state = state;
-            this.nonce = nonce;
-            this.appuuid = appuuid;
-        }
-    }
 
     private static JSONObject parseJson(String s) throws ParseException {
         Object o;
@@ -235,18 +227,18 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
                     new BasicAuthentication(config.getProperty("clientId"), config.getProperty("clientSecret")),
                     config.getProperty("clientId"),
                     "https://server.example.com/authorize"
-                    ).setCredentialDataStore(
+            ).setCredentialDataStore(
                     StoredCredential.getDefaultDataStore(
                             new FileDataStoreFactory(new File("datastoredir"))))
                     .build();
             requestUrl = authorizationCodeFlow
-                            .newAuthorizationUrl()
-                            .setResponseTypes(Collections.singleton("code"))
-                            .setScopes(Arrays.asList("openid", "email", "profile", "address"))
-                            .setRedirectUri("https://client.com/callback")
-                            .set("login_hint", request.getParameter("login_hint"));
-                            // .setState(state)
-                            // .set("nonce", nonce);
+                    .newAuthorizationUrl()
+                    .setResponseTypes(Collections.singleton("code"))
+                    .setScopes(Arrays.asList("openid", "email", "profile", "address"))
+                    .setRedirectUri("https://client.com/callback")
+                    .set("login_hint", request.getParameter("login_hint"));
+            // .setState(state)
+            // .set("nonce", nonce);
             return Response.seeOther(requestUrl.toURI()).build();
         } catch (Exception e) {
             // Error handling
@@ -400,7 +392,7 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
                     .build();
         }
         // .... other checks
-       authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
+        authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
         return Response.ok()
                 .entity(tokenResponse)
                 .build();
@@ -408,3 +400,4 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
 
 
 }
+

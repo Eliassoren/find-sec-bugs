@@ -1,6 +1,6 @@
 
 
-package testcode.oidc.nimbus;
+package testcode.oidc.otherexamples;
 
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.oauth2.sdk.*;

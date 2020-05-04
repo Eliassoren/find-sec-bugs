@@ -10,6 +10,7 @@ import com.google.api.client.auth.openidconnect.IdTokenVerifier;
 import com.google.api.client.http.GenericUrl;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import sun.security.util.Cache;
+import testcode.oidc.util.googleapiclient.OidcConfig;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -23,7 +24,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
-public class OidcAuthFlowValidateTokens {
+public class OidcValidateTokensGoogle {
 
 
     private Properties config;
@@ -35,17 +36,6 @@ public class OidcAuthFlowValidateTokens {
     Map<String, Object> providerMetadata;
     private String redirectUri = "https://client.com/callback";
     SecureRandom secureRandom;
-
-    private class OidcConfig {
-        public final String state;
-        public final String nonce;
-        public final UUID appuuid;
-        public OidcConfig(String state, String nonce, UUID appuuid) {
-            this.state = state;
-            this.nonce = nonce;
-            this.appuuid = appuuid;
-        }
-    }
 
 
     @SuppressFBWarnings("SERVLET_HEADER")
@@ -131,15 +121,22 @@ public class OidcAuthFlowValidateTokens {
         }
         return Response.status(Response.Status.UNAUTHORIZED).build();
     }
+        /*Validation of an ID token requires several steps:
+       - Verify that the Nonce in the  token request matches the issued nonce. X
+       - Verify that the ID token is properly signed by the issuer. Google-issued tokens are signed using one of the certificates found at the URI specified in the jwks_uri metadata value of the Discovery document. X
+       - Verify that the value of the iss claim in the ID token is equal to https://accounts.google.com or accounts.google.com.
+       - Verify that the value of the aud claim in the ID token is equal to your app's client ID. X
+       - Verify that the expiry time (exp claim) of the ID token has not passed. X
+       - If you specified a hd parameter value in the request, verify that the ID token has a hd claim that matches an accepted G Suite hosted domain.*/
 
-    public Response validateTokens(IdTokenResponse tokenResponse, OidcConfig oidcConfig) throws IOException, GeneralSecurityException {
-        IdToken idToken = tokenResponse.parseIdToken();
+    public Response validateTokens(IdTokenResponse tokenResponse, OidcConfig oidcConfig) throws IOException, GeneralSecurityException, ClassCastException {
+        IdToken idToken = tokenResponse.parseIdToken(); // Parse
         if(!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("The provided nonce did not match the one saved from the authorization request.")
                     .build();
         }
-        if(!idToken.verifySignature(keyFromDiscoveryDocument)) {
+        if(!idToken.verifySignature((PublicKey)providerMetadata.get("key"))){
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("The jwt signature is not valid.")
                     .build();
@@ -152,6 +149,11 @@ public class OidcAuthFlowValidateTokens {
         if(!idToken.verifyExpirationTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)){
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("Token expired.")
+                    .build();
+        }
+        if(!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity("The expected issuer did not match.")
                     .build();
         }
         // .... other checks

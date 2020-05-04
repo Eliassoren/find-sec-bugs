@@ -26,7 +26,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 
-public class OidcAuthFlowStateUsageRedirect {
+public class OidcAuthFlowCompleteExampleNimbus {
 
     private Properties config;
     private Cache<String, Object> cache;
@@ -34,15 +34,15 @@ public class OidcAuthFlowStateUsageRedirect {
     private URI callback;
     Logger logger;
 
-    public OidcAuthFlowStateUsageRedirect(Properties config, Cache<String, Object> cache) {
+    public OidcAuthFlowCompleteExampleNimbus(Properties config, Cache<String, Object> cache) {
         this.config = config;
         this.cache = cache;
     }
 
     private void processError(AuthenticationResponse response) {
-            ErrorObject errorObject = response.toErrorResponse().getErrorObject();
-            logger.error("Error response code"+errorObject.getHTTPStatusCode(), new String[0]);
-        }
+        ErrorObject errorObject = response.toErrorResponse().getErrorObject();
+        logger.error("Error response code"+errorObject.getHTTPStatusCode(), new String[0]);
+    }
     private IDTokenValidator idTokenValidator;
 
     private static class OidcConfig {
@@ -59,8 +59,8 @@ public class OidcAuthFlowStateUsageRedirect {
     private OIDCProviderMetadata discovery() {
         try {
             URL providerConfigurationURL = new URI("https://provider.example.com/")
-                                            .resolve("/.well-known/openid-configuration?")
-                                            .toURL();
+                    .resolve("/.well-known/openid-configuration?")
+                    .toURL();
             HttpsURLConnection connection = (HttpsURLConnection)providerConfigurationURL.openConnection();
             if(connection.getResponseCode() != HttpsURLConnection.HTTP_OK) {
                 throw new SecurityException("Discovery failed to respond with HTTP response code OK.");
@@ -78,7 +78,7 @@ public class OidcAuthFlowStateUsageRedirect {
         throw new RuntimeException("Failed to perform discovery");
     }
 
-        // Doesn't store param. Expect bug.
+    // Doesn't store param. Expect bug.
     public Response authenticationRequestForgetStoreStateAndNonce(HttpServletRequest request) {
         try {
             providerMetadata = discovery();
@@ -118,7 +118,7 @@ public class OidcAuthFlowStateUsageRedirect {
                 // Handle parse errors. Control flow must be broken here..
                 throw new SecurityException("Failed to parse auth response");
             }
-             // This block is STEP 2 in flow chart.
+            // This block is STEP 2 in flow chart.
             if (response instanceof AuthenticationErrorResponse) {
                 // process error
                 processError(response);
@@ -197,7 +197,7 @@ public class OidcAuthFlowStateUsageRedirect {
         }
     }
 
-   // @Path("/login")
+    // @Path("/login")
     // Step 1
     @SuppressFBWarnings("SERVLET_PARAMETER")
     public Response OK_authenticationRequestAddState(HttpServletRequest request) {
@@ -209,13 +209,13 @@ public class OidcAuthFlowStateUsageRedirect {
             cache.put(uuid.toString(), new OidcConfig(state, nonce, uuid));
             AuthenticationRequest req = new AuthenticationRequest.Builder(
                     new AuthenticationRequest(
-                        providerMetadata.getAuthorizationEndpointURI(),
-                        new ResponseType("code"),
-                        Scope.parse("openid email profile address"),
-                        new ClientID(config.getProperty("client_id")),
-                        new URI("https://client.com/callback"),
-                        state,
-                        nonce)
+                            providerMetadata.getAuthorizationEndpointURI(),
+                            new ResponseType("code"),
+                            Scope.parse("openid email profile address"),
+                            new ClientID(config.getProperty("client_id")),
+                            new URI("https://client.com/callback"),
+                            state,
+                            nonce)
             ).loginHint(request.getParameter("login_hint")).build();
             return Response.seeOther(req.toURI()).header("appuuid", uuid).build();
         } catch (URISyntaxException | ClassCastException e) {
@@ -252,7 +252,7 @@ public class OidcAuthFlowStateUsageRedirect {
                 return Response.status(Response.Status.UNAUTHORIZED).entity("State does not match").build(); // TODO second aspect: check must follow a broken control flow.
             }
             AuthorizationCode authorizationCode = successResponse.getAuthorizationCode();
-           return OK_tokenRequestValidateIdToken(oidcConfig, authorizationCode);
+            return OK_tokenRequestValidateIdToken(oidcConfig, authorizationCode);
         } catch (NullPointerException | ClassCastException e) {
             // Error handling
         }
