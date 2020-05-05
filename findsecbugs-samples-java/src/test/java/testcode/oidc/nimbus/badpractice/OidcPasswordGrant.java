@@ -1,4 +1,4 @@
-package testcode.oidc.nimbus;
+package testcode.oidc.nimbus.badpractice;
 
 import com.nimbusds.oauth2.sdk.AuthorizationGrant;
 import com.nimbusds.oauth2.sdk.ResourceOwnerPasswordCredentialsGrant;

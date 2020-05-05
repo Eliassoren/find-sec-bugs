@@ -75,7 +75,6 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
         try {
             URI issuerURI = new URI("https://provider.example.com/");
             URL providerConfigurationURL = issuerURI.resolve("/.well-known/openid-configuration?").toURL();
-
             HttpsURLConnection connection = (HttpsURLConnection)providerConfigurationURL.openConnection();
             connection.setRequestMethod("GET");
             if(!connection.getURL().getProtocol().equals("https")) {
@@ -166,6 +165,7 @@ Use AuthorizationCodeFlow.createAndStoreCredential(TokenResponse, String) to sto
                         .entity("The state does not match").build();
             }
             String authorizationCode = responseUrl.getCode();
+
             TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
                     .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
                     .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())

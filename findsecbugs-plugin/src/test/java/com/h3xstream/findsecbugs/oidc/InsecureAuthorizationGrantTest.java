@@ -7,12 +7,12 @@ import org.testng.annotations.Test;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
-public class OidcPasswordGrantTest extends BaseDetectorTest{
+public class InsecureAuthorizationGrantTest extends BaseDetectorTest{
     @Test
     public void usingUnsafePasswordGrantTest() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oidc/nimbus/OidcPasswordGrant")
+                getClassFilePath("testcode/oidc/nimbus/badpractice/OidcPasswordGrant")
         };
 
         //Run the analysis

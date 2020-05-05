@@ -1,4 +1,4 @@
-package testcode.oidc.nimbus;
+package testcode.oidc.nimbus.badpractice;
 
 import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.util.StringUtils;

@@ -14,7 +14,7 @@ public class InsecureDeleteSecretTest extends BaseDetectorTest {
     public void unsafeDeleteSecretTest() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oidc/nimbus/InsecureDeleteSecret")
+                getClassFilePath("testcode/oidc/nimbus/badpractice/InsecureDeleteSecret")
         };
 
         //Run the analysis

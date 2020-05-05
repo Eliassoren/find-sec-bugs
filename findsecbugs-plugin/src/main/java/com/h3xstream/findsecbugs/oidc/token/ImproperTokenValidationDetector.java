@@ -37,6 +37,11 @@ public class ImproperTokenValidationDetector implements Detector {
             .atMethod("<init>")
             .withArgs("(Ljava/lang/String;)V");// TODO: generalize statement. This trigger should be configurable
 
+    private static final List<InvokeMatcherBuilder> TOKEN_REQUEST_VARIATIONS = Arrays.asList(
+            TOKEN_REQUEST_NIMBUS,
+            TOKEN_REQUEST_GOOGLE
+    );
+
     private static final InvokeMatcherBuilder
             GET_STATE_METHOD = invokeInstruction()
             .atClass("com/nimbusds/openid/connect/sdk/AuthenticationResponse",
@@ -56,10 +61,7 @@ public class ImproperTokenValidationDetector implements Detector {
             .withArgs("(Ljava/lang/Object;)Z");
     private static final String TOKEN_VARIABLE_NAME_REGEX = "state"; // TODO: add possible variations
 
-    private static final List<InvokeMatcherBuilder> TOKEN_REQUEST_VARIATIONS = Arrays.asList(
-            TOKEN_REQUEST_NIMBUS,
-            TOKEN_REQUEST_GOOGLE
-    );
+
 
 
     private static final List<InvokeMatcherBuilder> STATE_EQUALS_INVOKE_VARIATIONS = Arrays.asList(

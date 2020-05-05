@@ -104,7 +104,7 @@ public class AuthResource {
             handleErrorResponses(httpResponse);
 
             OIDCTokenResponse response = OIDCTokenResponse.parse(httpResponse);
-
+            // FIXME bug: where is the token validation?
             return getResponse(response);
         } catch (Exception e) {
             if(e instanceof ParseException) {

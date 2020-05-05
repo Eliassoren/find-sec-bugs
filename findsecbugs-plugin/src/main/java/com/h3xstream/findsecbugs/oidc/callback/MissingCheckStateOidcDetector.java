@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.oidc.state;
+package com.h3xstream.findsecbugs.oidc.callback;
 
 import com.h3xstream.findsecbugs.common.matcher.InvokeMatcherBuilder;
 import com.h3xstream.findsecbugs.oidc.data.AnalyzedMethodStateUsage;
