@@ -134,8 +134,10 @@
     <Detector class="com.h3xstream.findsecbugs.oidc.InsecureDeleteSecretDetector"
               reports="UNSAFE_DELETE_SECRET_AUTH,UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH"/>
     <Detector class="com.h3xstream.findsecbugs.oidc.badpractice.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT_OAUTH"/>
-    <Detector class="com.h3xstream.findsecbugs.oidc.callback.MissingCheckStateOidcDetector"
+    <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.callback.MissingCheckStateOidcDetector"
               reports="MISSING_VERIFY_OIDC_STATE,EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE"/>
+    <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token.TokenValidationCFGAnalysis"
+              reports="IMPROPER_TOKEN_VERIFY_CONTROL_FLOW"/>
 
     <BugPattern type="HTTP_PARAMETER_POLLUTION" abbrev="SECHPP" category="SECURITY"/>
     <BugPattern type="SMTP_HEADER_INJECTION" abbrev="SECSMTP" category="SECURITY"/>
@@ -277,4 +279,5 @@
     <BugPattern type="USING_PASSWORD_GRANT_OAUTH" abbrev="SECISAUTH" category="SECURITY"/>
     <BugPattern type="MISSING_VERIFY_OIDC_STATE" abbrev="SECVMOS" category="SECURITY"/>
     <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE" abbrev="SECVMOSEXT" category="SECURITY"/>
+    <BugPattern type="IMPROPER_TOKEN_VERIFY_CONTROL_FLOW" abbrev="SECITVCF" category="SECURITY"/>
 </FindbugsPlugin>

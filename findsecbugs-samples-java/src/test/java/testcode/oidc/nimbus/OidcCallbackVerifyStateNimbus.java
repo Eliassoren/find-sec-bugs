@@ -125,6 +125,7 @@ public class OidcCallbackVerifyStateNimbus {
             String appuuid = UUID.fromString(httpAuthorizationCallback.getHeader("appuuid")).toString();
             OidcConfig oidcConfig = (OidcConfig)cache.get(appuuid);
             // FIXME: security error, missing state check
+            // TODO: Control flow: The state must be checked between trigger AuthenticationResponse and this exit point. Maybe this is implicit with the existence...
             OidcAuthenticationRequestStateUsageSample.stateMatcherHandleNoMatch(successResponse, oidcConfig.state);
         } catch (NullPointerException | ClassCastException e) {
             // Error handling

@@ -8,6 +8,8 @@ import com.google.api.client.auth.openidconnect.IdToken;
 import com.google.api.client.auth.openidconnect.IdTokenResponse;
 import com.google.api.client.auth.openidconnect.IdTokenVerifier;
 import com.google.api.client.http.GenericUrl;
+import com.nimbusds.openid.connect.sdk.validators.AccessTokenValidator;
+import com.nimbusds.openid.connect.sdk.validators.InvalidHashException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import sun.security.util.Cache;
 import testcode.oidc.util.googleapiclient.OidcConfig;
@@ -59,7 +61,7 @@ public class OidcValidateTokensGoogle {
                     .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
                     .setRedirectUri(redirectUri);
             IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
-            return validateTokens(idTokenResponse, oidcConfig);
+            return OK_validateTokens(idTokenResponse, oidcConfig);
         } catch (Exception e) {
             // Error handling
         }
@@ -73,7 +75,7 @@ public class OidcValidateTokensGoogle {
                     .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
                     .setRedirectUri(redirectUri);
             IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
-            return validateTokens(idTokenResponse, oidcConfig);
+            return OK_validateTokens(idTokenResponse, oidcConfig);
         } catch (Exception e) {
             // Error handling
         }
@@ -129,38 +131,85 @@ public class OidcValidateTokensGoogle {
        - Verify that the expiry time (exp claim) of the ID token has not passed. X
        - If you specified a hd parameter value in the request, verify that the ID token has a hd claim that matches an accepted G Suite hosted domain.*/
 
-    public Response validateTokens(IdTokenResponse tokenResponse, OidcConfig oidcConfig) throws IOException, GeneralSecurityException, ClassCastException {
-        IdToken idToken = tokenResponse.parseIdToken(); // Parse
-        if(!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("The provided nonce did not match the one saved from the authorization request.")
+    public Response validateTokensIncorrectReturn(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
+        try {
+            PublicKey publicKey = (PublicKey)providerMetadata.get("key");
+            IdToken idToken = tokenResponse.parseIdToken(); // Parse
+            if(!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
+                // Do stuff
+            }
+            if(!idToken.verifySignature(publicKey)){
+                String.valueOf(1);
+                // do stuff but no return
+            }
+            if(!idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("This request does not seem like it was meant for this audience.")
+                        .build();
+            }
+            if(!idToken.verifyExpirationTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)){
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Token expired.")
+                        .build();
+            }
+            if(!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The expected issuer did not match.")
+                        .build();
+            }
+            // .... other checks
+            authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
+
+            return Response.ok()
+                    .entity(tokenResponse)
                     .build();
+        } catch (IOException | GeneralSecurityException | ClassCastException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
-        if(!idToken.verifySignature((PublicKey)providerMetadata.get("key"))){
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("The jwt signature is not valid.")
+    }
+
+    public Response OK_validateTokens(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
+        try {
+            PublicKey publicKey = (PublicKey)providerMetadata.get("key");
+            IdToken idToken = tokenResponse.parseIdToken(); // Parse
+            if(!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The provided nonce did not match the one saved from the authorization request.")
+                        .build();
+            }
+            if(!idToken.verifySignature(publicKey)){
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The jwt signature is not valid.")
+                        .build();
+            }
+            if(!idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("This request does not seem like it was meant for this audience.")
+                        .build();
+            }
+            if(!idToken.verifyExpirationTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)){
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Token expired.")
+                        .build();
+            }
+            if(!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The expected issuer did not match.")
+                        .build();
+            }
+            // .... other checks
+            authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
+
+            return Response.ok()
+                    .entity(tokenResponse)
                     .build();
+        } catch (IOException | GeneralSecurityException | ClassCastException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
-        if(!idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("This request does not seem like it was meant for this audience.")
-                    .build();
-        }
-        if(!idToken.verifyExpirationTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)){
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("Token expired.")
-                    .build();
-        }
-        if(!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("The expected issuer did not match.")
-                    .build();
-        }
-        // .... other checks
-        authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
-        return Response.ok()
-                .entity(tokenResponse)
-                .build();
     }
 
 }

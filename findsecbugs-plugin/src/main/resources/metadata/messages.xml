@@ -6384,7 +6384,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     <BugCode abbrev="SECISAUTH">Usage of insecure authorization grant OIDC.</BugCode>
 
 
-    <Detector class="com.h3xstream.findsecbugs.oidc.callback.MissingCheckStateOidcDetector">
+    <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.callback.MissingCheckStateOidcDetector">
         <Details>Detecting missing state verification during OpenID Connect Authentication.</Details>
     </Detector>
     <BugPattern type="MISSING_VERIFY_OIDC_STATE">
@@ -6419,7 +6419,29 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
             ]]>
         </Details>
     </BugPattern>
+
     <BugCode abbrev="SECVMOSEXT">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
+
+    <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token.TokenValidationCFGAnalysis">
+        <Details>Token cfg</Details>
+    </Detector>
+    <BugPattern type="IMPROPER_TOKEN_VERIFY_CONTROL_FLOW" >
+        <ShortDescription>Token validation</ShortDescription>
+        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP
+            while handling of authorization code flow response from IdP. </LongDescription>
+        <Details>
+            <![CDATA[
+            <p>Remember to check that the state matches. If the state is not checked locally,
+            make sure it is verified in the location where it is passed.</p>
+            <pre>
+              if(!verifyState(successResponse.getState()) {
+                // Unauthorized
+              }
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECITVCF">Token validation improper control flow: failed to return.</BugCode>
 
 
 

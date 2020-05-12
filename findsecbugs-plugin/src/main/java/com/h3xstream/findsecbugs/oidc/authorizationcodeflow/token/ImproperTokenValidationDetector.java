@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.oidc.token;
+package com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token;
 
 import com.h3xstream.findsecbugs.common.matcher.InvokeMatcherBuilder;
 import com.h3xstream.findsecbugs.oidc.data.AnalyzedMethodStateUsage;
@@ -50,9 +50,10 @@ public class ImproperTokenValidationDetector implements Detector {
 
     private static final InvokeMatcherBuilder
             NIMBUS_TOKEN_VERIFY_SDK = invokeInstruction() //
-            .atClass("Method com/nimbusds/openid/connect/sdk/validators/IDTokenValidator")
+            .atClass("com/nimbusds/openid/connect/sdk/validators/IDTokenValidator")
             .atMethod("validate")
             .withArgs("(Lcom/nimbusds/jwt/JWT;Lcom/nimbusds/openid/connect/sdk/Nonce;)Lcom/nimbusds/openid/connect/sdk/claims/IDTokenClaimsSet;"); // TODO: generalize. More params should be checked. In Googleapi, strings are used. May want to evaluate for certain variable names to be sure.
+
 
     private static final InvokeMatcherBuilder
             GOOGLE_TOKEN_VERIFY_SDK = invokeInstruction() //

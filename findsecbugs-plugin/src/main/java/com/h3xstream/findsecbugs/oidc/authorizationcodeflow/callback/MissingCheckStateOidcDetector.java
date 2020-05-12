@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.oidc.callback;
+package com.h3xstream.findsecbugs.oidc.authorizationcodeflow.callback;
 
 import com.h3xstream.findsecbugs.common.matcher.InvokeMatcherBuilder;
 import com.h3xstream.findsecbugs.oidc.data.AnalyzedMethodStateUsage;
@@ -178,8 +178,6 @@ public class MissingCheckStateOidcDetector implements Detector {
                    // FIXME: we must ensure that this looks for something that may do "verify", either by throwing or returning boolean. FP risk: passing on and continuing verify
                     // TODO: look at logic. Null now.
                    foundStatePassedAsParamToPossibleCheck = true;
-
-
                    boolean calledMethodContainsStateInName = invokeInstruction.getMethodName(cpg).contains("state");
                    saveStatePassedAsParam(cpg, invokeInstruction,
                            new AnalyzedMethodStateUsage(m,
