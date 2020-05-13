@@ -1,4 +1,4 @@
-package com.h3xstream.findsecbugs.oidc;
+package com.h3xstream.findsecbugs.oidc.badpractice;
 
 import com.h3xstream.findbugs.test.BaseDetectorTest;
 import com.h3xstream.findbugs.test.EasyBugReporter;

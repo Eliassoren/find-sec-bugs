@@ -1,26 +1,23 @@
-package com.h3xstream.findsecbugs.oidc.data;
+package com.h3xstream.findsecbugs.oidc.data.cfg;
 
 import edu.umd.cs.findbugs.ba.BasicBlock;
-import org.apache.bcel.Const;
-import org.apache.bcel.generic.GETSTATIC;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.StreamSupport;
 
 public class ReturnBlockTrail {
     private final BasicBlock parentWithTokenVerify;
     private List<BasicBlock> trail;
     private boolean foundReturnStatement;
     private boolean foundHttpResponseStatus;
-    private boolean foundHttp400sCode;
+    private boolean foundResponseIndicatingInvalidation;
     public ReturnBlockTrail(BasicBlock parentWithTokenVerify) {
         this.parentWithTokenVerify = parentWithTokenVerify;
         trail = new ArrayList<>();
         trail.add(parentWithTokenVerify);
         foundReturnStatement = false;
         foundHttpResponseStatus = false;
-        foundHttp400sCode = false;
+        foundResponseIndicatingInvalidation = false;
     }
 
     public BasicBlock getParentWithTokenVerify() {
@@ -35,8 +32,8 @@ public class ReturnBlockTrail {
         return foundHttpResponseStatus;
     }
 
-    public boolean foundHttp400sCode() {
-        return foundHttp400sCode;
+    public boolean foundResponseIndicationInvalidation() {
+        return foundResponseIndicatingInvalidation;
     }
 
     public void addBlockToTrail(BasicBlock basicBlock) {
@@ -51,7 +48,7 @@ public class ReturnBlockTrail {
         this.foundHttpResponseStatus = foundHttpResponseStatus;
     }
 
-    public void setFoundHttp400sCode(boolean foundHttp400sCode) {
-        this.foundHttp400sCode = foundHttp400sCode;
+    public void setFoundResponseIndicatingInvalidation(boolean foundResponseIndicatingInvalidation) {
+        this.foundResponseIndicatingInvalidation = foundResponseIndicatingInvalidation;
     }
 }

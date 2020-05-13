@@ -6443,6 +6443,52 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECITVCF">Token validation improper control flow: failed to return.</BugCode>
 
+    <BugPattern type="REVERSED_IF_EQUALS_ID_TOKEN_VERIFY" >
+        <ShortDescription>Token validation</ShortDescription>
+        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP
+            while handling of authorization code flow response from IdP. </LongDescription>
+        <Details>
+            <![CDATA[
+            <p>Remember that any failed verificaton of ID token is that idToken.verifyx() is false.
+            Therefore a good patterns is a chain of if/else conditionals with if(!verifyx()) --> unauhorize</p>
+            <pre>
+              if(!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The provided nonce did not match the one saved from the authorization request.")
+                        .build();
+            }
+            if(!idToken.verifySignature(publicKey)){
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The jwt signature is not valid.")
+                        .build();
+            }
+            if(!idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("This request does not seem like it was meant for this audience.")
+                        .build();
+            }
+            if(!idToken.verifyExpirationTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)){
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Token expired.")
+                        .build();
+            }
+            if(!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The expected issuer did not match.")
+                        .build();
+            }
+            // .... other checks
+            authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
+
+            return Response.ok()
+                    .entity(tokenResponse)
+                    .build();
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECREQTVER">It appears like you have an reversed if-conditional verifying the ID token.</BugCode>
+
 
 
 </MessageCollection>

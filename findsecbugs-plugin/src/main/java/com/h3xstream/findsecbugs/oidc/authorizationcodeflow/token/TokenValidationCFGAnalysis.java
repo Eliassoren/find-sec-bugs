@@ -1,7 +1,8 @@
 package com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token;
 
 import com.h3xstream.findsecbugs.common.matcher.InvokeMatcherBuilder;
-import com.h3xstream.findsecbugs.oidc.data.ReturnBlockTrail;
+import com.h3xstream.findsecbugs.oidc.data.cfg.NonceVerifyBlockTrail;
+import com.h3xstream.findsecbugs.oidc.data.cfg.ReturnBlockTrail;
 import edu.umd.cs.findbugs.BugInstance;
 import edu.umd.cs.findbugs.BugReporter;
 import edu.umd.cs.findbugs.Detector;
@@ -26,7 +27,8 @@ public class TokenValidationCFGAnalysis implements Detector {
         this.bugReporter = bugReporter;
     }
 
-    private final String IMPROPER_TOKEN_VERIFY_CONTROL_FLOW = "IMPROPER_TOKEN_VERIFY_CONTROL_FLOW";
+    private final static String IMPROPER_TOKEN_VERIFY_CONTROL_FLOW = "IMPROPER_TOKEN_VERIFY_CONTROL_FLOW";
+    private final static String REVERSED_IF_EQUALS_ID_TOKEN_VERIFY = "REVERSED_IF_EQUALS_ID_TOKEN_VERIFY";
 
     private final String GOOGLE_ID_TOKEN_RESPONSE= "com/google/api/client/auth/openidconnect/IdTokenResponse";
     private final String GOOGLE_ID_TOKEN = "Lcom/google/api/client/auth/openidconnect/IdToken";
@@ -35,7 +37,8 @@ public class TokenValidationCFGAnalysis implements Detector {
     private final InvokeMatcherBuilder
             GOOGLE_PARSE_TOKEN_INVOKE = invokeInstruction()
             .atClass("com/google/api/client/auth/openidconnect/IdTokenResponse")
-            .atMethod("parseIdToken");
+            .atMethod("parseIdToken")
+            .withArgs("()Lcom/google/api/client/auth/openidconnect/IdToken;");
     // Verify nonce:
     private final InvokeMatcherBuilder
             GOOGLE_ID_TOKEN_GET_NONCE = invokeInstruction()
@@ -66,7 +69,6 @@ public class TokenValidationCFGAnalysis implements Detector {
 
     private final List<InvokeMatcherBuilder>
             VERIFICATION_INVOCATIONS = Arrays.asList(
-                                            GOOGLE_ID_TOKEN_GET_NONCE,
                                             GOOGLE_ID_TOKEN_VER_SIGN,
                                             GOOGLE_ID_TOKEN_VER_AUD,
                                             GOOGLE_ID_TOKEN_VER_EXP,
@@ -105,14 +107,10 @@ public class TokenValidationCFGAnalysis implements Detector {
         || methodGen.getSignature().contains(GOOGLE_ID_TOKEN_RESPONSE);
     }
 
-    private boolean instructionListIndicatesIdToken(InstructionList instructionList, ConstantPoolGen cpg) {
+    private boolean instructionListIndicatesIdTokenValidation(InstructionList instructionList, ConstantPoolGen cpg) {
         for (InstructionHandle instructionHandle : instructionList) {
             Instruction instruction = instructionHandle.getInstruction();
-            if (!(instruction instanceof InvokeInstruction)) {
-                continue;
-            }
-            InvokeInstruction invokeInstruction = (InvokeInstruction) instruction;
-            if(GOOGLE_PARSE_TOKEN_INVOKE.matches(invokeInstruction, cpg)) {
+            if(instructionMatchesIdTokenValidate(instruction, cpg)) {
                 return true;
             }
         }
@@ -126,7 +124,7 @@ public class TokenValidationCFGAnalysis implements Detector {
         return false;
     }
 
-    private BasicBlock searchReturnBlockAfterBlock(BasicBlock basicBlock, CFG cfg, ConstantPoolGen cpg, int depthSafetyCounter, ReturnBlockTrail returnBlockTrail) {
+    private BasicBlock searchReturnBlockAfterConditional(BasicBlock basicBlock, CFG cfg, ConstantPoolGen cpg, int depthSafetyCounter, ReturnBlockTrail returnBlockTrail) {
 
         Edge ft = cfg.getOutgoingEdgeWithType(basicBlock, EdgeTypes.FALL_THROUGH_EDGE);
         BasicBlock targetBlock = ft.getTarget();
@@ -157,22 +155,22 @@ public class TokenValidationCFGAnalysis implements Detector {
             returnBlockTrail.setFoundHttpResponseStatus(true);
         }
         if(foundHttp400sCode) {
-            returnBlockTrail.setFoundHttp400sCode(true);
+            returnBlockTrail.setFoundResponseIndicatingInvalidation(true);
         }
         if(isReturnBlock(targetBlock, cfg)) {
             returnBlockTrail.setFoundReturnStatement(true);
             return targetBlock;
         }
         if(depthSafetyCounter > 25) return null;
-        return searchReturnBlockAfterBlock(targetBlock, cfg, cpg, depthSafetyCounter+1, returnBlockTrail);
+        return searchReturnBlockAfterConditional(targetBlock, cfg, cpg, depthSafetyCounter+1, returnBlockTrail);
     }
 
 
     private boolean foundReturnBlockAfterIf(BasicBlock basicBlock, CFG cfg, ConstantPoolGen cpg) {
         ReturnBlockTrail returnBlockTrail = new ReturnBlockTrail(basicBlock);
-        BasicBlock returnBlock = searchReturnBlockAfterBlock(basicBlock, cfg, cpg, 1, returnBlockTrail);
+        BasicBlock returnBlock = searchReturnBlockAfterConditional(basicBlock, cfg, cpg, 1, returnBlockTrail);
         if(returnBlock == null) return false;
-        return returnBlockTrail.foundReturnStatement() && returnBlockTrail.foundHttp400sCode() && returnBlockTrail.foundHttpResponseStatus();//
+        return returnBlockTrail.foundReturnStatement() && returnBlockTrail.foundResponseIndicationInvalidation() && returnBlockTrail.foundHttpResponseStatus();//
     }
 
      private boolean isReturnBlock(BasicBlock basicBlock, CFG cfg) {
@@ -187,24 +185,134 @@ public class TokenValidationCFGAnalysis implements Detector {
             return ret != null && foundReturnStatement;
         }
 
+
+    private BasicBlock foundBlockWithGetNonce(BasicBlock b, CFG cfg, ConstantPoolGen cpg, NonceVerifyBlockTrail trail) {
+        // Nonce verify for google is especially hard since it's stringly typed.
+        Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
+        boolean hasTokenParse = StreamSupport.stream(iterableIns.spliterator(), false)
+                .anyMatch(i -> GOOGLE_PARSE_TOKEN_INVOKE.matches(i.getInstruction(), cpg));
+        trail.addBlockToTrail(b);
+        if(hasTokenParse) {
+            // Exit condition: we can be certain that nonce is not check before token response is parsed
+            return b;
+        }
+        boolean hasStringEquals = StreamSupport.stream(iterableIns.spliterator(), false)
+                .anyMatch(i -> STRING_EQUALS.matches(i.getInstruction(), cpg));
+        boolean hasGetNonce = StreamSupport.stream(iterableIns.spliterator(), false)
+                .anyMatch(i -> GOOGLE_ID_TOKEN_GET_NONCE.matches(i.getInstruction(), cpg));
+
+        if(hasStringEquals) {
+            trail.setFoundStringEquals(true);
+        }
+        if(hasGetNonce) {
+            trail.setFoundGetNonce(true);
+            return b;
+        }
+        // Check preceding blocks for nonce
+        Edge incomingFallThrough = cfg.getIncomingEdgeWithType(b, EdgeTypes.FALL_THROUGH_EDGE);
+        if(incomingFallThrough != null) {
+            BasicBlock prev = incomingFallThrough.getSource();
+            return foundBlockWithGetNonce(prev, cfg, cpg, trail);
+        }
+        return null;
+    }
+
+    private boolean hasNonceVerify(BasicBlock b, CFG cfg, ConstantPoolGen cpg) {
+        NonceVerifyBlockTrail trail = new NonceVerifyBlockTrail(b);
+        BasicBlock foundBlockWithGetNonce = foundBlockWithGetNonce(b, cfg, cpg, trail);
+        if(foundBlockWithGetNonce == null) return false;
+        return trail.foundStringEquals() && trail.foundGetNonce();
+    }
+
     private boolean isTokenVerifyBlock(BasicBlock b, CFG cfg, ConstantPoolGen cpg) {
+        /*FIXME: this has the assumption that a call to verify won't be in a previous block
+           therefore prone to FPs per now. Have to trace values. Probably another argument for dfa */
+        Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
+        boolean isIfBlock = isIfConditionalBlock(b, cfg);
+        boolean hasNonceVerify = false;
+
+        boolean hasValidateIDTokenFunction = StreamSupport.stream(iterableIns.spliterator(), false)
+                .anyMatch(i -> instructionMatchesIdTokenValidate(i.getInstruction(), cpg));
+        if(isIfBlock && !hasValidateIDTokenFunction) {
+            hasNonceVerify = hasNonceVerify(b, cfg, cpg);
+        }
+       return isIfBlock
+                && (hasValidateIDTokenFunction || hasNonceVerify);
+    }
+
+    private boolean isIfConditionalBlock(BasicBlock b, CFG cfg) {
+        /*FIXME: this has the assumption that a call to verify won't be in a previous block
+           therefore prone to FPs per now. Have to trace values. Probably another argument for dfa */
         Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
         Edge ifed = cfg.getOutgoingEdgeWithType(b, EdgeTypes.IFCMP_EDGE);
         Edge fted = cfg.getOutgoingEdgeWithType(b, EdgeTypes.FALL_THROUGH_EDGE);
-        // Edge ret = cfg.getOutgoingEdgeWithType(b, EdgeTypes.RETURN_EDGE);
         boolean hasOutgoingIfEdges = (ifed != null && fted != null);
-        boolean hasIfInstruction =  StreamSupport.stream(iterableIns.spliterator(), false)
+        boolean hasAnyIfInstruction =  StreamSupport.stream(iterableIns.spliterator(), false)
                 .anyMatch(i -> ifInstructionSet.get(i.getInstruction().getOpcode()));
-        boolean hasValidateIDTokenFunction = StreamSupport.stream(iterableIns.spliterator(), false)
-                .anyMatch(i -> instructionMatchesIdTokenValidate(i.getInstruction(), cpg));
-       return  hasOutgoingIfEdges
-               && hasIfInstruction
-               && hasValidateIDTokenFunction;
+        return  hasOutgoingIfEdges
+                && hasAnyIfInstruction;
     }
+
+    private boolean missingIfNeConditional(BasicBlock b) {
+        Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
+        boolean hasIfNeInstruction =  StreamSupport.stream(iterableIns.spliterator(), false)
+                .anyMatch(i -> Const.IFNE == i.getInstruction().getOpcode());
+        return !hasIfNeInstruction;
+    }
+
+    private Optional<InvokeInstruction> getVerifyInvokeFromBasicBlock(BasicBlock b, CFG cfg, ConstantPoolGen cpg) {
+        Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
+        return StreamSupport.stream(iterableIns.spliterator(), false)
+                .filter(i -> instructionMatchesIdTokenValidate(i.getInstruction(), cpg))
+                .map(i -> (InvokeInstruction)i.getInstruction())
+                .findFirst();
+    }
+
+    @Override
+    public void visitClassContext(ClassContext classContext) {
+        //printCFGDetailsAnalysis(classContext);
+        // printCFG(classContext);
+        JavaClass javaClass = classContext.getJavaClass();
+        for (Method m : javaClass.getMethods()) {
+            MethodGen methodGen = classContext.getMethodGen(m);
+            ConstantPoolGen cpg = classContext.getConstantPoolGen();
+            if (methodGen == null || methodGen.getInstructionList() == null) {
+                continue; //No instruction .. nothing to do
+            }
+            if(idTokenInSignature(methodGen) || instructionListIndicatesIdTokenValidation(methodGen.getInstructionList(), cpg)) {
+                try {
+                    CFG cfg = classContext.getCFG(m);
+                    Iterator<BasicBlock> basicBlockIterator = cfg.blockIterator();
+                    while (basicBlockIterator.hasNext()) {
+                        BasicBlock b = basicBlockIterator.next();
+                        if(isTokenVerifyBlock(b, cfg, cpg)) {
+                            if(missingIfNeConditional(b)) {
+                                BugInstance bugInstance = new BugInstance(this, REVERSED_IF_EQUALS_ID_TOKEN_VERIFY, Priorities.NORMAL_PRIORITY)
+                                        .addClassAndMethod(javaClass, m);
+                                Optional<InvokeInstruction> verifyIns = getVerifyInvokeFromBasicBlock(b, cfg, cpg);
+                                verifyIns.ifPresent(invokeInstruction -> bugInstance.addCalledMethod(cpg, invokeInstruction));
+                                bugReporter.reportBug(bugInstance);
+                            }
+                            if(!foundReturnBlockAfterIf(b, cfg, cpg)) {
+                                BugInstance bugInstance = new BugInstance(this, IMPROPER_TOKEN_VERIFY_CONTROL_FLOW, Priorities.HIGH_PRIORITY)
+                                        .addClassAndMethod(javaClass, m);
+                                Optional<InvokeInstruction> verifyIns = getVerifyInvokeFromBasicBlock(b, cfg, cpg);
+                                verifyIns.ifPresent(invokeInstruction -> bugInstance.addCalledMethod(cpg, invokeInstruction));
+                                bugReporter.reportBug(bugInstance);
+                            }
+                        }
+                    }
+                } catch (CFGBuilderException e) {
+                    //
+                }
+            }
+        }
+    }
+
 
     private void printCFG(ClassContext classContext) {
         for (Method m : classContext.getJavaClass().getMethods())
-            if(m.getName().equals("validateTokens") || m.getName().equals("simpleCFGAnalyzed1") || m.getName().equals("simpleCFGAnalyzed2")) {
+            if(m.getName().contains("validateTokensIncorrectReturn") || m.getName().equals("simpleCFGAnalyzed1") || m.getName().equals("simpleCFGAnalyzed2")) {
                 try {
                     CFG cfg =  classContext.getCFG(m);
                     printer = new CFGPrinter(cfg);
@@ -269,54 +377,6 @@ public class TokenValidationCFGAnalysis implements Detector {
             }
         }
     }
-
-    @Override
-    public void visitClassContext(ClassContext classContext) {
-        //printCFGDetailsAnalysis(classContext);
-        JavaClass javaClass = classContext.getJavaClass();
-        for (Method m : javaClass.getMethods()) {
-            MethodGen methodGen = classContext.getMethodGen(m);
-            ConstantPoolGen cpg = classContext.getConstantPoolGen();
-            if (methodGen == null || methodGen.getInstructionList() == null) {
-                continue; //No instruction .. nothing to do
-            }
-            if(idTokenInSignature(methodGen) || instructionListIndicatesIdToken(methodGen.getInstructionList(), cpg)) {
-                try {
-                    CFG cfg = classContext.getCFG(m);
-
-                    Iterator<BasicBlock> basicBlockIterator = cfg.blockIterator();
-                    while (basicBlockIterator.hasNext()) {
-                        BasicBlock b = basicBlockIterator.next();
-                        Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
-                        if(isTokenVerifyBlock(b, cfg, cpg)) {
-
-                                StreamSupport.stream(iterableIns.spliterator(), false).forEachOrdered(i -> {
-                                    Instruction instruction = i.getInstruction();
-                                    if (!(instruction instanceof InvokeInstruction)) {
-                                        return;
-                                    }
-                                    InvokeInstruction invokeInstruction = (InvokeInstruction) instruction;
-                                    if(GOOGLE_ID_TOKEN_VER_SIGN.matches(instruction, cpg)) {
-                                        printCFG(classContext);
-                                        System.out.println("Verify block:"+ b);
-                                        if(!foundReturnBlockAfterIf(b, cfg, cpg)) {
-                                            bugReporter.reportBug(
-                                                    new BugInstance(this, IMPROPER_TOKEN_VERIFY_CONTROL_FLOW, Priorities.HIGH_PRIORITY)
-                                                    .addClassAndMethod(javaClass, m));
-                                        }
-                                    }
-
-                                });
-
-                        }
-                    }
-                } catch (CFGBuilderException e) {
-                    //
-                }
-            }
-        }
-    }
-
 
     @Override
     public void report() {

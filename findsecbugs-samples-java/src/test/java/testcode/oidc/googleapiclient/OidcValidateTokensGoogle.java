@@ -123,39 +123,92 @@ public class OidcValidateTokensGoogle {
         }
         return Response.status(Response.Status.UNAUTHORIZED).build();
     }
-        /*Validation of an ID token requires several steps:
-       - Verify that the Nonce in the  token request matches the issued nonce. X
-       - Verify that the ID token is properly signed by the issuer. Google-issued tokens are signed using one of the certificates found at the URI specified in the jwks_uri metadata value of the Discovery document. X
-       - Verify that the value of the iss claim in the ID token is equal to https://accounts.google.com or accounts.google.com.
-       - Verify that the value of the aud claim in the ID token is equal to your app's client ID. X
-       - Verify that the expiry time (exp claim) of the ID token has not passed. X
-       - If you specified a hd parameter value in the request, verify that the ID token has a hd claim that matches an accepted G Suite hosted domain.*/
+
+    public Response validateTokensReversedIfConditional(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
+        try {
+            IdToken idToken = tokenResponse.parseIdToken(); // Parse
+            if(idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("This request does not seem like it was meant for this audience.")
+                        .build();
+            }
+            // .... other checks
+            authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
+            return Response.ok()
+                    .entity(tokenResponse)
+                    .build();
+        } catch (IOException | ClassCastException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
+    public Response validateTokensNotControlFlow(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
+        try {
+            PublicKey publicKey = (PublicKey)providerMetadata.get("key");
+            IdToken idToken = tokenResponse.parseIdToken(); // Parse
+            idToken.verifySignature(publicKey);
+            idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")));
+            return Response.ok()
+                    .entity(tokenResponse)
+                    .build();
+        } catch (IOException | GeneralSecurityException | ClassCastException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 
     public Response validateTokensIncorrectReturn(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
         try {
             PublicKey publicKey = (PublicKey)providerMetadata.get("key");
             IdToken idToken = tokenResponse.parseIdToken(); // Parse
+
+            if(!idToken.verifySignature(publicKey)){
+                String.valueOf(1);
+                // do stuff but no return
+                // FIXME BUG: no return. Falls through to response ok.
+            }
+            authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
+
+            return Response.ok()
+                    .entity(tokenResponse)
+                    .build();
+        } catch (IOException | GeneralSecurityException | ClassCastException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    public Response validateTokensCompleteIncorrectReturn(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
+        try {
+            PublicKey publicKey = (PublicKey)providerMetadata.get("key");
+            IdToken idToken = tokenResponse.parseIdToken(); // Parse
             if(!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
                 // Do stuff
+                boolean b = publicKey.getAlgorithm().contains("rabdin");
+                // FIXME BUG: no return
             }
             if(!idToken.verifySignature(publicKey)){
                 String.valueOf(1);
                 // do stuff but no return
+                // FIXME BUG: no return
             }
             if(!idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
-                return Response.status(Response.Status.UNAUTHORIZED)
-                        .entity("This request does not seem like it was meant for this audience.")
-                        .build();
+                return Response.ok().build();
+                // FIXME BUG: return OK in wrong place
             }
             if(!idToken.verifyExpirationTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)){
-                return Response.status(Response.Status.UNAUTHORIZED)
-                        .entity("Token expired.")
-                        .build();
+                return null;
+                // FIXME BUG: return null. Smelly code. Should return some data instead.
             }
             if(!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
-                return Response.status(Response.Status.UNAUTHORIZED)
-                        .entity("The expected issuer did not match.")
-                        .build();
+                String a = "";
+                a = a + publicKey.getAlgorithm();
+                // FIXME BUG: no return
             }
             // .... other checks
             authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
@@ -170,9 +223,20 @@ public class OidcValidateTokensGoogle {
         }
     }
 
+
+
+
+
+    /*Validation of an ID token requires several steps:
+ - Verify that the Nonce in the  token request matches the issued nonce. X
+ - Verify that the ID token is properly signed by the issuer. Google-issued tokens are signed using one of the certificates found at the URI specified in the jwks_uri metadata value of the Discovery document. X
+ - Verify that the value of the iss claim in the ID token is equal to https://accounts.google.com or accounts.google.com.
+ - Verify that the value of the aud claim in the ID token is equal to your app's client ID. X
+ - Verify that the expiry time (exp claim) of the ID token has not passed. X
+ - If you specified a hd parameter value in the request, verify that the ID token has a hd claim that matches an accepted G Suite hosted domain.*/
     public Response OK_validateTokens(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
         try {
-            PublicKey publicKey = (PublicKey)providerMetadata.get("key");
+            PublicKey publicKey = (PublicKey)providerMetadata.get("key"); // fix codeexample
             IdToken idToken = tokenResponse.parseIdToken(); // Parse
             if(!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
                 return Response.status(Response.Status.UNAUTHORIZED)
