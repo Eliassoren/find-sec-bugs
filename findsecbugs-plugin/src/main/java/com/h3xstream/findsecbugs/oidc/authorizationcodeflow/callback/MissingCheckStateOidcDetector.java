@@ -1,7 +1,24 @@
+/**
+ * Find Security Bugs
+ * Copyright (c) Philippe Arteau, All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.
+ */
 package com.h3xstream.findsecbugs.oidc.authorizationcodeflow.callback;
 
 import com.h3xstream.findsecbugs.common.matcher.InvokeMatcherBuilder;
-import com.h3xstream.findsecbugs.oidc.data.AnalyzedMethodStateUsage;
+import com.h3xstream.findsecbugs.oidc.data.AnalyzedMethodPeepholes;
 import com.h3xstream.findsecbugs.oidc.data.CalledMethodIdentifiers;
 import edu.umd.cs.findbugs.*;
 import edu.umd.cs.findbugs.ba.ClassContext;
@@ -19,12 +36,12 @@ public class MissingCheckStateOidcDetector implements Detector {
     private final BugReporter bugReporter;
     private static final String MISSING_VERIFY_OIDC_STATE = "MISSING_VERIFY_OIDC_STATE";
     private static final String EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE = "EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE";
-    // TODO: Add scenario for FP reduction: if the externaly called method is explicitly names "verifyState" or something obvious, allow it.
+    // TODO: Add scenario for FP reduction: if the externaly called method is explicitly named "verifyState" or something obvious, allow it.
     // Or make an additional warning class just informing...
 
-    private Map<MethodAnnotation, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheckForeignMethod = new HashMap<>();
-    private Map<CalledMethodIdentifiers, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheckForeignNotFound = new HashMap<>();
-    private Map<Method, AnalyzedMethodStateUsage> methodCallersThatShouldHaveStateCheck = new HashMap<>();
+    private Map<MethodAnnotation, AnalyzedMethodPeepholes> methodCallersThatShouldHaveStateCheckForeignMethod = new HashMap<>();
+    private Map<CalledMethodIdentifiers, AnalyzedMethodPeepholes> methodCallersThatShouldHaveStateCheckForeignNotFound = new HashMap<>();
+    private Map<Method, AnalyzedMethodPeepholes> methodCallersThatShouldHaveStateCheck = new HashMap<>();
     JavaClass javaClass;
     private static final InvokeMatcherBuilder
             AUTH_RESPONSE_PARSE = invokeInstruction()
@@ -55,6 +72,8 @@ public class MissingCheckStateOidcDetector implements Detector {
             .atClass("java/lang/String")
             .atMethod("equals")
             .withArgs("(Ljava/lang/Object;)Z");
+
+
     private static final String STATE_VARIABLE_NAME_REGEX = "state"; // TODO: add possible variations
 
     private static final List<InvokeMatcherBuilder> AUTH_RESPONSE_PARSE_VARIATIONS = Arrays.asList(
@@ -83,7 +102,7 @@ public class MissingCheckStateOidcDetector implements Detector {
         return stateParameter && !isAuthenticationRequest && returnTypeSeemsLikeVerifyFunction;
     }
 
-    private void saveStatePassedAsParam(ConstantPoolGen cpg, InvokeInstruction invokeInstruction, AnalyzedMethodStateUsage analyzedMethodStateUsage) {
+    private void saveStatePassedAsParam(ConstantPoolGen cpg, InvokeInstruction invokeInstruction, AnalyzedMethodPeepholes analyzedMethodPeepholes) {
         Method calledMethod = findLocalMethodWithName(javaClass,
                 invokeInstruction.getMethodName(cpg),
                 invokeInstruction.getClassName(cpg));
@@ -92,7 +111,7 @@ public class MissingCheckStateOidcDetector implements Detector {
                 JavaClassAndMethod exactMethod = Hierarchy.findExactMethod(invokeInstruction, cpg);
                 MethodAnnotation methodAnnotation = MethodAnnotation.fromXMethod(exactMethod.toXMethod());
                 methodCallersThatShouldHaveStateCheckForeignMethod.put(
-                        methodAnnotation, analyzedMethodStateUsage);
+                        methodAnnotation, analyzedMethodPeepholes);
             } catch (ClassNotFoundException e) {
                 CalledMethodIdentifiers calledMethodIdentifiers = new CalledMethodIdentifiers(
                         invokeInstruction.getClassName(cpg),
@@ -101,12 +120,12 @@ public class MissingCheckStateOidcDetector implements Detector {
                 );
                 methodCallersThatShouldHaveStateCheckForeignNotFound.put(
                         calledMethodIdentifiers,
-                        analyzedMethodStateUsage);
+                        analyzedMethodPeepholes);
             }
         } else {
             methodCallersThatShouldHaveStateCheck.put(
                     calledMethod,
-                    analyzedMethodStateUsage);
+                    analyzedMethodPeepholes);
         }
     }
 
@@ -161,12 +180,12 @@ public class MissingCheckStateOidcDetector implements Detector {
                     continue;
                 }
                 InvokeInstruction invokeInstruction = (InvokeInstruction) instruction;
-                boolean stateVerifyMethodIndications = stateInMethodName && !foundAuthResponseParse; // Probably a verify method
+                boolean stateVerifyMethodIndications = (stateInMethodName && !foundAuthResponseParse) || foundGetState; // Probably a verify method
                 if(AUTH_RESPONSE_PARSE_VARIATIONS.stream().anyMatch(i -> i.matches(instruction, cpg))) {
                     foundAuthResponseParse = true;
                 } else if(GET_STATE_METHOD.matches(instruction, cpg)) {
                     foundGetState = true;
-                } else if(looksLikeStateVerify(instruction, cpg, foundGetState || stateVerifyMethodIndications)) {
+                } else if(looksLikeStateVerify(instruction, cpg, stateVerifyMethodIndications)) {
                     foundStateVerify = true;
                     methodsWithStateCheck.add(m);
                 }
@@ -178,9 +197,9 @@ public class MissingCheckStateOidcDetector implements Detector {
                    // FIXME: we must ensure that this looks for something that may do "verify", either by throwing or returning boolean. FP risk: passing on and continuing verify
                     // TODO: look at logic. Null now.
                    foundStatePassedAsParamToPossibleCheck = true;
-                   boolean calledMethodContainsStateInName = invokeInstruction.getMethodName(cpg).contains("state");
+                   boolean calledMethodContainsStateInName = invokeInstruction.getMethodName(cpg).contains(STATE_VARIABLE_NAME_REGEX);
                    saveStatePassedAsParam(cpg, invokeInstruction,
-                           new AnalyzedMethodStateUsage(m,
+                           new AnalyzedMethodPeepholes(m,
                            foundAuthResponseParse,
                            foundStateVerify,
                            true,
@@ -199,7 +218,7 @@ public class MissingCheckStateOidcDetector implements Detector {
 
         if(!methodCallersThatShouldHaveStateCheck.isEmpty()) {
             for(Method localCalledMethod : methodCallersThatShouldHaveStateCheck.keySet()) {
-                AnalyzedMethodStateUsage analyzedMethod = methodCallersThatShouldHaveStateCheck.get(localCalledMethod);
+                AnalyzedMethodPeepholes analyzedMethod = methodCallersThatShouldHaveStateCheck.get(localCalledMethod);
                 if(analyzedMethod.notClearedAndPossiblyPassesCheck) {
                     if(!methodsWithStateCheck.contains(localCalledMethod)) {
                         reportInterproceduralMethodCall(javaClass,
@@ -213,7 +232,7 @@ public class MissingCheckStateOidcDetector implements Detector {
 
         if(!methodCallersThatShouldHaveStateCheckForeignMethod.isEmpty()) {
             for(MethodAnnotation calledMethodAnnotation : methodCallersThatShouldHaveStateCheckForeignMethod.keySet()) {
-                AnalyzedMethodStateUsage analyzedMethod = methodCallersThatShouldHaveStateCheckForeignMethod.get(calledMethodAnnotation);
+                AnalyzedMethodPeepholes analyzedMethod = methodCallersThatShouldHaveStateCheckForeignMethod.get(calledMethodAnnotation);
                 if(analyzedMethod.notClearedAndPossiblyPassesCheck) {
                     reportInterproceduralMethodCall(
                             javaClass,
@@ -226,7 +245,7 @@ public class MissingCheckStateOidcDetector implements Detector {
 
         if(!methodCallersThatShouldHaveStateCheckForeignNotFound.isEmpty()) {
             for(CalledMethodIdentifiers calledMethodIdentifiers: methodCallersThatShouldHaveStateCheckForeignNotFound.keySet()) {
-                AnalyzedMethodStateUsage analyzedMethod = methodCallersThatShouldHaveStateCheckForeignNotFound.get(calledMethodIdentifiers);
+                AnalyzedMethodPeepholes analyzedMethod = methodCallersThatShouldHaveStateCheckForeignNotFound.get(calledMethodIdentifiers);
                 if(analyzedMethod.notClearedAndPossiblyPassesCheck) {
                     reportInterproceduralMethodCall(
                             javaClass,

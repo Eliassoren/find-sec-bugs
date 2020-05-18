@@ -6423,7 +6423,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     <BugCode abbrev="SECVMOSEXT">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
 
     <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token.TokenValidationCFGAnalysis">
-        <Details>Token cfg</Details>
+        <Details>ID Token validation Control Flow Analysis</Details>
     </Detector>
     <BugPattern type="IMPROPER_TOKEN_VERIFY_CONTROL_FLOW" >
         <ShortDescription>Token validation</ShortDescription>
@@ -6489,6 +6489,86 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECREQTVER">It appears like you have an reversed if-conditional verifying the ID token.</BugCode>
 
+
+    <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token.ImproperTokenValidationDetector">
+        <Details>ID Token validation linear peephole instruction analysis</Details>
+    </Detector>
+    <BugPattern type="MISSING_VERIFY_ID_TOKEN" >
+        <ShortDescription>Missing validation of ID Token.</ShortDescription>
+        <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            There are five values in the ID token response that must be verified.  </LongDescription>
+        <Details>
+            <![CDATA[
+            <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).</p>
+            You seem to be missing such validation in the code locations where you implement the token request flow.
+            <pre>
+             There are five values in the ID token response that must be verified.
+             You may use an SDK-implemented validation if this implements all these checks.
+             Otherwise it is recommended to do these comparisons yourself.
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECMVIDT"> You seem to be missing the specification-required ID Token validation in OpenID Connect.</BugCode>
+ <BugPattern type="USING_INCOMPLETE_ID_TOKEN_VALIDATOR" >
+        <ShortDescription>Using incomplete SDK-implemented ID Token validation.</ShortDescription>
+        <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            There are five values in the ID token response that must be verified.  </LongDescription>
+        <Details>
+            <![CDATA[
+            <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            You seem to be missing such validation in the code locations where you implement the token request flow.
+            There are five values in the ID token response that must be verified.
+             You may use an SDK-implemented validation if this implements all these checks.
+             Otherwise it is recommended to do these comparisons yourself. </p>
+             <pre>
+
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECUIDTV"> You seem to be missing the specification-required ID Token validation in OpenID Connect.</BugCode>
+
+     <BugPattern type="INCOMPLETE_ID_TOKEN_VERIFICATION" >
+        <ShortDescription>Using incomplete SDK-implemented ID Token validation.</ShortDescription>
+        <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            There are five values in the ID token response that must be verified. </LongDescription>
+        <Details>
+            <![CDATA[
+            <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            There are five values in the ID token response that must be verified.
+            You seem to be missing one or more of these checks.
+             You may use an SDK-implemented validation if this implements all these checks.
+             Otherwise it is recommended to do these comparisons yourself. </p>
+            <pre>
+
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECIIDTV"> You seem to be missing the specification-required ID Token validation in OpenID Connect.</BugCode>
+
+     <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN" >
+        <ShortDescription>Passing ID Token to unknown foreign method</ShortDescription>
+        <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            There are five values in the ID token response that must be verified.  </LongDescription>
+        <Details>
+            <![CDATA[
+           <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            There are five values in the ID token response that must be verified.
+            You seem to be passing ID token somewhere, but we do not see any validation checks.
+             We recommend that you verify that these checks are performed in order to prevent vulnerabilities
+             in your code implementing a party in OpenID Connect.
+
+             You may use an SDK-implemented validation if this implements all these checks.
+             Otherwise it is recommended to do these comparisons yourself. </p>
+              <pre>
+
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECMVIDTEXT"> You seem to be missing the specification-required ID Token validation in OpenID Connect.</BugCode>
 
 
 </MessageCollection>

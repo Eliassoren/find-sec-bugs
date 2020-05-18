@@ -8,6 +8,7 @@ import com.google.api.client.auth.openidconnect.IdToken;
 import com.google.api.client.auth.openidconnect.IdTokenResponse;
 import com.google.api.client.auth.openidconnect.IdTokenVerifier;
 import com.google.api.client.http.GenericUrl;
+import com.google.api.client.util.Clock;
 import com.nimbusds.openid.connect.sdk.validators.AccessTokenValidator;
 import com.nimbusds.openid.connect.sdk.validators.InvalidHashException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -41,7 +42,7 @@ public class OidcValidateTokensGoogle {
 
 
     @SuppressFBWarnings("SERVLET_HEADER")
-    public Response OK_callbackCheckState(HttpServletRequest callbackRequest) {
+    public Response OK_validateTokensComplete(HttpServletRequest callbackRequest) {
         try {
             UUID uuid = UUID.fromString(callbackRequest.getHeader("appuuid"));
             OidcConfig oidcConfig = (OidcConfig)cache.get(uuid);
@@ -90,7 +91,10 @@ public class OidcValidateTokensGoogle {
                     .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
                     .setRedirectUri(redirectUri);
             IdTokenResponse idTokenResponse = IdTokenResponse.execute(tokenRequest); // HTTP
-            IdTokenVerifier idTokenVerifier = new IdTokenVerifier();
+            IdTokenVerifier idTokenVerifier = new IdTokenVerifier.Builder()
+                                                .setAudience(Collections.singleton(authorizationCodeFlow.getClientId()))
+                                                .setIssuer(String.valueOf(providerMetadata.get("iss")))
+                                                .build();
             if(idTokenVerifier.verify(idTokenResponse.parseIdToken())) {
                 // Fixme: verifier is missing nonce and jwt check
                 authorizationCodeFlow.createAndStoreCredential(idTokenResponse, oidcConfig.appuuid.toString());
@@ -108,6 +112,7 @@ public class OidcValidateTokensGoogle {
         try {
             // After verified state and parse auth code..
             TokenRequest tokenRequest = authorizationCodeFlow.newTokenRequest(authorizationCode)
+                    .setGrantType("code")
                     .setTokenServerUrl(new GenericUrl(authorizationCodeFlow.getTokenServerEncodedUrl()))
                     .setClientAuthentication(authorizationCodeFlow.getClientAuthentication())
                     .setRedirectUri(redirectUri);

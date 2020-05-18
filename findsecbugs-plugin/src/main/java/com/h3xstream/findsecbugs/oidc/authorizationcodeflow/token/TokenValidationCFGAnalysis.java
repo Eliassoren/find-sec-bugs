@@ -1,3 +1,20 @@
+/**
+ * Find Security Bugs
+ * Copyright (c) Philippe Arteau, All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.
+ */
 package com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token;
 
 import com.h3xstream.findsecbugs.common.matcher.InvokeMatcherBuilder;
@@ -186,7 +203,7 @@ public class TokenValidationCFGAnalysis implements Detector {
         }
 
 
-    private BasicBlock foundBlockWithGetNonce(BasicBlock b, CFG cfg, ConstantPoolGen cpg, NonceVerifyBlockTrail trail) {
+    private BasicBlock findBlockWithGetNonce(BasicBlock b, CFG cfg, ConstantPoolGen cpg, NonceVerifyBlockTrail trail) {
         // Nonce verify for google is especially hard since it's stringly typed.
         Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
         boolean hasTokenParse = StreamSupport.stream(iterableIns.spliterator(), false)
@@ -212,14 +229,14 @@ public class TokenValidationCFGAnalysis implements Detector {
         Edge incomingFallThrough = cfg.getIncomingEdgeWithType(b, EdgeTypes.FALL_THROUGH_EDGE);
         if(incomingFallThrough != null) {
             BasicBlock prev = incomingFallThrough.getSource();
-            return foundBlockWithGetNonce(prev, cfg, cpg, trail);
+            return findBlockWithGetNonce(prev, cfg, cpg, trail);
         }
         return null;
     }
 
     private boolean hasNonceVerify(BasicBlock b, CFG cfg, ConstantPoolGen cpg) {
         NonceVerifyBlockTrail trail = new NonceVerifyBlockTrail(b);
-        BasicBlock foundBlockWithGetNonce = foundBlockWithGetNonce(b, cfg, cpg, trail);
+        BasicBlock foundBlockWithGetNonce = findBlockWithGetNonce(b, cfg, cpg, trail);
         if(foundBlockWithGetNonce == null) return false;
         return trail.foundStringEquals() && trail.foundGetNonce();
     }
@@ -230,7 +247,6 @@ public class TokenValidationCFGAnalysis implements Detector {
         Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
         boolean isIfBlock = isIfConditionalBlock(b, cfg);
         boolean hasNonceVerify = false;
-
         boolean hasValidateIDTokenFunction = StreamSupport.stream(iterableIns.spliterator(), false)
                 .anyMatch(i -> instructionMatchesIdTokenValidate(i.getInstruction(), cpg));
         if(isIfBlock && !hasValidateIDTokenFunction) {
@@ -244,9 +260,9 @@ public class TokenValidationCFGAnalysis implements Detector {
         /*FIXME: this has the assumption that a call to verify won't be in a previous block
            therefore prone to FPs per now. Have to trace values. Probably another argument for dfa */
         Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
-        Edge ifed = cfg.getOutgoingEdgeWithType(b, EdgeTypes.IFCMP_EDGE);
-        Edge fted = cfg.getOutgoingEdgeWithType(b, EdgeTypes.FALL_THROUGH_EDGE);
-        boolean hasOutgoingIfEdges = (ifed != null && fted != null);
+        Edge ifEdge = cfg.getOutgoingEdgeWithType(b, EdgeTypes.IFCMP_EDGE);
+        Edge fallthroughEdge = cfg.getOutgoingEdgeWithType(b, EdgeTypes.FALL_THROUGH_EDGE);
+        boolean hasOutgoingIfEdges = (ifEdge != null && fallthroughEdge != null);
         boolean hasAnyIfInstruction =  StreamSupport.stream(iterableIns.spliterator(), false)
                 .anyMatch(i -> ifInstructionSet.get(i.getInstruction().getOpcode()));
         return  hasOutgoingIfEdges
@@ -260,10 +276,11 @@ public class TokenValidationCFGAnalysis implements Detector {
         return !hasIfNeInstruction;
     }
 
-    private Optional<InvokeInstruction> getVerifyInvokeFromBasicBlock(BasicBlock b, CFG cfg, ConstantPoolGen cpg) {
+    private Optional<InvokeInstruction> getVerifyInvokeFromBasicBlock(BasicBlock b, ConstantPoolGen cpg) {
         Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();
         return StreamSupport.stream(iterableIns.spliterator(), false)
-                .filter(i -> instructionMatchesIdTokenValidate(i.getInstruction(), cpg))
+                .filter(i -> instructionMatchesIdTokenValidate(i.getInstruction(), cpg)
+                            || STRING_EQUALS.matches(i.getInstruction(), cpg)) // FIXME: Nonce is troublesome. Add similar search to find more relevant ins
                 .map(i -> (InvokeInstruction)i.getInstruction())
                 .findFirst();
     }
@@ -289,14 +306,14 @@ public class TokenValidationCFGAnalysis implements Detector {
                             if(missingIfNeConditional(b)) {
                                 BugInstance bugInstance = new BugInstance(this, REVERSED_IF_EQUALS_ID_TOKEN_VERIFY, Priorities.NORMAL_PRIORITY)
                                         .addClassAndMethod(javaClass, m);
-                                Optional<InvokeInstruction> verifyIns = getVerifyInvokeFromBasicBlock(b, cfg, cpg);
+                                Optional<InvokeInstruction> verifyIns = getVerifyInvokeFromBasicBlock(b, cpg);
                                 verifyIns.ifPresent(invokeInstruction -> bugInstance.addCalledMethod(cpg, invokeInstruction));
                                 bugReporter.reportBug(bugInstance);
                             }
                             if(!foundReturnBlockAfterIf(b, cfg, cpg)) {
                                 BugInstance bugInstance = new BugInstance(this, IMPROPER_TOKEN_VERIFY_CONTROL_FLOW, Priorities.HIGH_PRIORITY)
                                         .addClassAndMethod(javaClass, m);
-                                Optional<InvokeInstruction> verifyIns = getVerifyInvokeFromBasicBlock(b, cfg, cpg);
+                                Optional<InvokeInstruction> verifyIns = getVerifyInvokeFromBasicBlock(b, cpg);
                                 verifyIns.ifPresent(invokeInstruction -> bugInstance.addCalledMethod(cpg, invokeInstruction));
                                 bugReporter.reportBug(bugInstance);
                             }

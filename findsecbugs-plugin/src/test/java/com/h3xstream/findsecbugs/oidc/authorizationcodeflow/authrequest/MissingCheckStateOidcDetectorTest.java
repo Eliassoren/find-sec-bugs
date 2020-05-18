@@ -1,3 +1,20 @@
+/**
+ * Find Security Bugs
+ * Copyright (c) Philippe Arteau, All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.
+ */
 package com.h3xstream.findsecbugs.oidc.authorizationcodeflow.authrequest;
 
 import com.h3xstream.findbugs.test.BaseDetectorTest;
@@ -8,15 +25,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 public class MissingCheckStateOidcDetectorTest extends BaseDetectorTest {
-    /*New bug MISSING_VERIFY_OIDC_STATE [OidcCallbackVerifyStateNimbus.callBackMissingCheckState() at 115]
-|INFO | EasyBugReporter : New bug MISSING_VERIFY_OIDC_STATE [OidcCallbackVerifyStateNimbus.callBackMissingCheckStatePassedParam() at 144]
-|INFO | EasyBugReporter : New bug MISSING_VERIFY_OIDC_STATE [OidcCallbackVerifyStateNimbus.stateMatcherHandleNoMatch() at 305]
-|INFO | EasyBugReporter : New bug EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE [OidcCallbackVerifyStateNimbus.callBackMissingCheckStatePassedParamForeign() at 174]
-|INFO | EasyBugReporter : New bug MISSING_VERIFY_OIDC_STATE [OidcCallbackVerifyStateGoogle.callbackMissingCheckState() at 305]
-|INFO | EasyBugReporter : New bug MISSING_VERIFY_OIDC_STATE [OidcCallbackVerifyStateGoogle.callbackMissingCheckStatePassedToOther() at 334]
-|INFO | EasyBugReporter : New bug MISSING_VERIFY_OIDC_STATE [OidcCallbackVerifyStateGoogle.passStateNoCheck() at 328]
-|INFO | EasyBugReporter : New bug EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE [OidcCallbackVerifyStateGoogle.callbackMissingCheckStatePassedForeign() at 360]
-*/
 
     @Test
     public void forgotToCheckStateTestNimbusSDK() throws Exception {
