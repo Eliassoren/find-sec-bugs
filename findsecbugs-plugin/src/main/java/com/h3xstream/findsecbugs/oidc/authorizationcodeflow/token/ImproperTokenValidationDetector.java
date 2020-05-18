@@ -35,6 +35,7 @@ import static com.h3xstream.findsecbugs.common.matcher.InstructionDSL.invokeInst
 public class ImproperTokenValidationDetector implements Detector {
     private final BugReporter bugReporter;
     private static final String MISSING_VERIFY_ID_TOKEN = "MISSING_VERIFY_ID_TOKEN";
+    private static final String MISSING_VERIFY_NONCE = "MISSING_VERIFY_NONCE";
     private static final String INCOMPLETE_ID_TOKEN_VERIFICATION = "INCOMPLETE_ID_TOKEN_VERIFICATION";
     private static final String USING_INCOMPLETE_ID_TOKEN_VALIDATOR = "USING_INCOMPLETE_ID_TOKEN_VALIDATOR";
     private static final String EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN = "EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN";
@@ -90,18 +91,25 @@ public class ImproperTokenValidationDetector implements Detector {
 
 
     private static final InvokeMatcherBuilder
-            GOOGLE_TOKEN_VERIFY_SDK = invokeInstruction() //
+            GOOGLE_TOKEN_VERIFY_SDK = invokeInstruction() // missing crypto key and nonce
             .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier")
+            .atMethod("verify")
+            .withArgs("(Lcom/google/api/client/auth/openidconnect/IdToken;)Z");
+
+private static final InvokeMatcherBuilder
+            GOOGLE_INTERNAL_TOKEN_VERIFY_SDK = invokeInstruction() // missing nonce check but has crypto
+            .atClass("com/google/api/client/googleapis/auth/oauth2/GoogleIdTokenVerifier")
             .atMethod("verify")
             .withArgs("(Lcom/google/api/client/auth/openidconnect/IdToken;)Z");
 
 
     private static final String TOKEN_VARIABLE_NAME_REGEX_PATTERN = "token"; // TODO: add possible variations
-    private static final String VERIFY_REGEXPATTERN = ".*verify|validate.*"; // TODO: add possible variations
+    private static final String VERIFY_REGEXPATTERN = ".*verify|valid.*"; // TODO: add possible variations
 
 
     private static final List<InvokeMatcherBuilder> INCOMPLETE_TOKEN_VERIFY_SDK_METHOD = Arrays.asList(
-            GOOGLE_TOKEN_VERIFY_SDK
+            GOOGLE_TOKEN_VERIFY_SDK,
+            GOOGLE_INTERNAL_TOKEN_VERIFY_SDK
     );
 
     private static final List<InvokeMatcherBuilder> TOKEN_VERIFY_SDK_VARIATIONS = Arrays.asList(
@@ -167,10 +175,25 @@ public class ImproperTokenValidationDetector implements Detector {
 
 
 
-    private boolean looksLikeTokenSDKVerify(Instruction instruction, ConstantPoolGen cpg, boolean indicationsOfVariableToVerify) {
-
+    private boolean looksLikeValidTokenSDKVerify(Instruction instruction, ConstantPoolGen cpg, boolean indicationsOfVariableToVerify) {
         return (TOKEN_VERIFY_SDK_VARIATIONS.stream().anyMatch(i -> i.matches(instruction, cpg)));
-                //|| (GOOGLE_TOKEN_VERIFY_SDK.matches(instruction, cpg) && indicationsOfVariableToVerify);
+    }
+
+    private boolean hasVerifySignature(MethodGen methodGen, ConstantPoolGen cpg) {
+        boolean hasVerifySignature = false;
+        for (InstructionHandle instructionHandle : methodGen.getInstructionList()) {
+            Instruction instruction = instructionHandle.getInstruction();
+            if (!(instruction instanceof InvokeInstruction)) {
+                continue;
+            }
+            if(GOOGLE_VERIFY_SIGNATURE.matches(instruction, cpg)) {
+                hasVerifySignature = true;
+            }
+            if(GOOGLE_INTERNAL_TOKEN_VERIFY_SDK.matches(instruction, cpg)) {
+                hasVerifySignature = true;
+            }
+        }
+        return hasVerifySignature;
     }
 
     private boolean hasVerifyNonce(MethodGen methodGen, ConstantPoolGen cpg) {
@@ -205,7 +228,6 @@ public class ImproperTokenValidationDetector implements Detector {
             if (!(instruction instanceof InvokeInstruction)) {
                 continue;
             }
-
             if(GOOGLE_VERIFY_ISSUER.matches(instruction, cpg)) {
                 foundVerifyIss = true;
             } else if(GOOGLE_VERIFY_AUD.matches(instruction, cpg)) {
@@ -220,10 +242,14 @@ public class ImproperTokenValidationDetector implements Detector {
         boolean completeVerify = foundVerifyIss
                                 && foundVerifyAud
                                 && foundVerifySignatureCrypto
-                                && foundVerifyExp
-                                && hasVerifyNonce(methodGen, cpg);
+                                && foundVerifyExp;
+
         if(!completeVerify) {
             bugReporter.reportBug(new BugInstance(this, INCOMPLETE_ID_TOKEN_VERIFICATION, Priorities.NORMAL_PRIORITY)
+                    .addClassAndMethod(javaClass, m));
+        }
+        if(!hasVerifyNonce(methodGen, cpg)) {
+            bugReporter.reportBug(new BugInstance(this, MISSING_VERIFY_NONCE, Priorities.NORMAL_PRIORITY)
                     .addClassAndMethod(javaClass, m));
         }
     }
@@ -280,8 +306,8 @@ public class ImproperTokenValidationDetector implements Detector {
         boolean foundTokenPassedAsParamToPossibleCheck = false; // We pass state outside of the procedure and need an additional check.
         boolean foundGetIdToken = false;
         boolean foundTokenVerifyCall = false;
-        boolean foundTokenVerifyManualChecks = false;
         boolean tokenInMethodSignature = false;
+        boolean foundIncompleteValidatorSDK = false;
         Method[] methods = javaClass.getMethods();
         List<Method> methodsWithVerify = new ArrayList<>();
         List<Method> methodsRequireAllTokenChecks = new ArrayList<>();
@@ -297,22 +323,27 @@ public class ImproperTokenValidationDetector implements Detector {
             foundTokenRequest = false;
             foundTokenVerifyCall = false;
             tokenInMethodSignature = false;
+            foundIncompleteValidatorSDK = false;
             MethodGen methodGen = classContext.getMethodGen(m);
 
             ConstantPoolGen cpg = classContext.getConstantPoolGen();
             if (methodGen == null || methodGen.getInstructionList() == null) {
                 continue; //No instruction .. nothing to do
             }
-            if(methodGen.getName().toLowerCase().contains("token")
-                    || Arrays.stream(m.getLocalVariableTable()
-                    .getLocalVariableTable())
-                    .anyMatch(mth -> mth.getName().matches(TOKEN_VARIABLE_NAME_REGEX_PATTERN)
-                            ||
-                            (mth.getSignature().contains("Lcom/nimbusds/jwt/JWT;")
-                            || mth.getSignature().contains("Lcom/google/api/client/auth/openidconnect/IdToken"))
-                    )) {
-                // Localvariabletable
-                tokenInMethodSignature = true;
+            try {
+                if (methodGen.getName().toLowerCase().contains("token")
+                        || m.getLocalVariableTable() != null && Arrays.stream(m.getLocalVariableTable()
+                        .getLocalVariableTable())
+                        .anyMatch(mth -> mth.getName().matches(TOKEN_VARIABLE_NAME_REGEX_PATTERN)
+                                ||
+                                (mth.getSignature().contains("Lcom/nimbusds/jwt/JWT;")
+                                        || mth.getSignature().contains("Lcom/google/api/client/auth/openidconnect/IdToken"))
+                        )) {
+                    // Localvariabletable
+                    tokenInMethodSignature = true;
+                }
+            } catch (Exception e) {
+                // Could fail in stream
             }
 
             for (InstructionHandle instructionHandle : methodGen.getInstructionList()) {
@@ -326,17 +357,15 @@ public class ImproperTokenValidationDetector implements Detector {
                     foundTokenRequest = true;
                 } else if(GET_TOKEN_VARIATIONS.stream().anyMatch(r -> r.matches(instruction, cpg))) {
                     foundGetIdToken = true;
-                } else if(looksLikeTokenSDKVerify(instruction, cpg, tokenVerifyIndications)) {
+                } else if(looksLikeValidTokenSDKVerify(instruction, cpg, tokenVerifyIndications)) {
                     foundTokenVerifyCall = true;
                     methodsWithVerify.add(m);
-                } else if(looksLikeManualTokenVerify(methodGen, cpg)) {
+                } else if(looksLikeManualTokenVerify(methodGen, cpg) && !foundTokenVerifyCall) {
                     foundTokenVerifyCall = true;
                     methodsWithVerify.add(m);
                     methodsRequireAllTokenChecks.add(m);
-                }
-                else if(INCOMPLETE_TOKEN_VERIFY_SDK_METHOD.stream().anyMatch(v -> v.matches(instruction, cpg))) {
-                    bugReporter.reportBug(new BugInstance(this, USING_INCOMPLETE_ID_TOKEN_VALIDATOR, Priorities.NORMAL_PRIORITY)
-                            .addClassAndMethod(javaClass, m));
+                } else if(INCOMPLETE_TOKEN_VERIFY_SDK_METHOD.stream().anyMatch(v -> v.matches(instruction, cpg))) {
+                   foundIncompleteValidatorSDK = true;
                 }
 
                 if(looksLikeIdTokenPassedParam(invokeInstruction, cpg, foundGetIdToken)
@@ -348,7 +377,6 @@ public class ImproperTokenValidationDetector implements Detector {
 
                     boolean calledMethodIndicatesVerify = invokeInstruction.getMethodName(cpg).contains(TOKEN_VARIABLE_NAME_REGEX_PATTERN)
                                                             || invokeInstruction.getMethodName(cpg).matches(VERIFY_REGEXPATTERN);
-
                     savePassedAsParam(cpg, invokeInstruction,
                                            new AnalyzedMethodPeepholes(
                                                    m,
@@ -361,6 +389,17 @@ public class ImproperTokenValidationDetector implements Detector {
                 }
             }
 
+            if(foundIncompleteValidatorSDK) {
+                if(!hasVerifyNonce(methodGen, cpg)) {
+                    bugReporter.reportBug(new BugInstance(this, USING_INCOMPLETE_ID_TOKEN_VALIDATOR, Priorities.NORMAL_PRIORITY)
+                            .addClassAndMethod(javaClass, m));
+                    bugReporter.reportBug(new BugInstance(this, MISSING_VERIFY_NONCE, Priorities.NORMAL_PRIORITY)
+                            .addClassAndMethod(javaClass, m));
+                } else if(!hasVerifySignature(methodGen, cpg)) {
+                    bugReporter.reportBug(new BugInstance(this, USING_INCOMPLETE_ID_TOKEN_VALIDATOR, Priorities.NORMAL_PRIORITY)
+                            .addClassAndMethod(javaClass, m));
+                }
+            }
 
 
             if (foundTokenRequest && !foundTokenVerifyCall && !foundTokenPassedAsParamToPossibleCheck) {
@@ -369,6 +408,13 @@ public class ImproperTokenValidationDetector implements Detector {
             }
         }
 
+        if(!methodsRequireAllTokenChecks.isEmpty()) {
+            for(Method m: methodsRequireAllTokenChecks) {
+                // TODO: for the incomplete libraries it is still okay to use validate() but implementing the additional checks.
+                // if using googletokenverifier, check that it still is doing nonce check.
+                verifyThatAllChecksAreThere(m, classContext.getMethodGen(m), classContext.getConstantPoolGen());
+            }
+        }
 
         if(!methodCallersThatShouldHaveVerify.isEmpty()) {
             for(Method localCalledMethod : methodCallersThatShouldHaveVerify.keySet()) {
@@ -387,7 +433,7 @@ public class ImproperTokenValidationDetector implements Detector {
         if(!methodCallersThatShouldHaveCheckForeignMethod.isEmpty()) {
             for(MethodAnnotation calledMethodAnnotation : methodCallersThatShouldHaveCheckForeignMethod.keySet()) {
                 AnalyzedMethodPeepholes analyzedMethod = methodCallersThatShouldHaveCheckForeignMethod.get(calledMethodAnnotation);
-                if(analyzedMethod.notClearedAndPossiblyPassesCheck) {
+                if(analyzedMethod.notClearedAndPossiblyPassesCheck && !analyzedMethod.calledMethodNameIndicatesVerify) {
                     reportInterproceduralMethodCall(
                             javaClass,
                             calledMethodAnnotation,
@@ -400,7 +446,7 @@ public class ImproperTokenValidationDetector implements Detector {
         if(!methodCallersThatShouldHaveCheckForeignNotFound.isEmpty()) {
             for(CalledMethodIdentifiers calledMethodIdentifiers: methodCallersThatShouldHaveCheckForeignNotFound.keySet()) {
                 AnalyzedMethodPeepholes analyzedMethod = methodCallersThatShouldHaveCheckForeignNotFound.get(calledMethodIdentifiers);
-                if(analyzedMethod.notClearedAndPossiblyPassesCheck) {
+                if(analyzedMethod.notClearedAndPossiblyPassesCheck && !analyzedMethod.calledMethodNameIndicatesVerify) {
                     reportInterproceduralMethodCall(
                             javaClass,
                             calledMethodIdentifiers,

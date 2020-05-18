@@ -6405,8 +6405,8 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
 
  <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE">
         <ShortDescription>State verification check may be missing. State is passed as a parameter to some foreign method.</ShortDescription>
-        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP
-            while handling of authorization code flow response from IdP. </LongDescription>
+        <LongDescription>The state parameter in the AuthenticationResponse must be verified for checking integrity of the IdP
+            while handling of authorization code flow response from IdP. We do not see any explicit State verification, but State is passed as a parameter to some foreign method. </LongDescription>
         <Details>
             <![CDATA[
             <p>Remember to check that the state matches. If the state is not checked locally,
@@ -6420,23 +6420,19 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
         </Details>
     </BugPattern>
 
-    <BugCode abbrev="SECVMOSEXT">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
+    <BugCode abbrev="SECVMOSEXT">State verification check may be missing, passed as a parameter to some foreign method.</BugCode>
 
     <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token.TokenValidationCFGAnalysis">
         <Details>ID Token validation Control Flow Analysis</Details>
     </Detector>
     <BugPattern type="IMPROPER_TOKEN_VERIFY_CONTROL_FLOW" >
-        <ShortDescription>Token validation</ShortDescription>
-        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP
-            while handling of authorization code flow response from IdP. </LongDescription>
+        <ShortDescription>Token validation control flow.</ShortDescription>
+        <LongDescription> When performing an ID token check the specification requires that you return HTTP 401. </LongDescription>
         <Details>
             <![CDATA[
-            <p>Remember to check that the state matches. If the state is not checked locally,
-            make sure it is verified in the location where it is passed.</p>
+            <p>Any check failing must lead to a HTTP 401 response for proper control flow for token verification.</p>
             <pre>
-              if(!verifyState(successResponse.getState()) {
-                // Unauthorized
-              }
+
             </pre>
             ]]>
         </Details>
@@ -6444,9 +6440,8 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     <BugCode abbrev="SECITVCF">Token validation improper control flow: failed to return.</BugCode>
 
     <BugPattern type="REVERSED_IF_EQUALS_ID_TOKEN_VERIFY" >
-        <ShortDescription>Token validation</ShortDescription>
-        <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP
-            while handling of authorization code flow response from IdP. </LongDescription>
+        <ShortDescription>Token validation reverse equals in if check.</ShortDescription>
+        <LongDescription>Token validation requires proper control flow. You seems to have reversed the boolean of one of your checks. </LongDescription>
         <Details>
             <![CDATA[
             <p>Remember that any failed verificaton of ID token is that idToken.verifyx() is false.
@@ -6496,7 +6491,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     <BugPattern type="MISSING_VERIFY_ID_TOKEN" >
         <ShortDescription>Missing validation of ID Token.</ShortDescription>
         <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
-            There are five values in the ID token response that must be verified.  </LongDescription>
+            There are five values in the ID token response that must be verified todo2.  </LongDescription>
         <Details>
             <![CDATA[
             <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).</p>
@@ -6509,7 +6504,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
             ]]>
         </Details>
     </BugPattern>
-    <BugCode abbrev="SECMVIDT"> You seem to be missing the specification-required ID Token validation in OpenID Connect.</BugCode>
+    <BugCode abbrev="SECMVIDT"> Missing specification-required ID Token validation in OpenID Connect.</BugCode>
  <BugPattern type="USING_INCOMPLETE_ID_TOKEN_VALIDATOR" >
         <ShortDescription>Using incomplete SDK-implemented ID Token validation.</ShortDescription>
         <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
@@ -6517,22 +6512,25 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
         <Details>
             <![CDATA[
             <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
-            You seem to be missing such validation in the code locations where you implement the token request flow.
+            You seem to be using an ID token validation method implemented by an SDK which is known to be incomplete, as it does not implement all five checks.
             There are five values in the ID token response that must be verified.
-             You may use an SDK-implemented validation if this implements all these checks.
+             In Google's APIs for example, the com/google/api/client/auth/openidconnect/IdTokenVerifier
+             fails to implement the checks for validating the Key signatures and Nonce.
+             Meanwhile the com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier implements
+              crypto signature validation. Still it misses Nonce check.(https://github.com/googleapis/google-api-java-client/blob/master/google-api-client/src/main/java/com/google/api/client/googleapis/auth/oauth2/GoogleIdTokenVerifier.java)
              Otherwise it is recommended to do these comparisons yourself. </p>
              <pre>
-
+                // todo
             </pre>
             ]]>
         </Details>
     </BugPattern>
-    <BugCode abbrev="SECUIDTV"> You seem to be missing the specification-required ID Token validation in OpenID Connect.</BugCode>
+    <BugCode abbrev="SECUIDTV">Using incomplete SDK-implemented ID Token validation.</BugCode>
 
      <BugPattern type="INCOMPLETE_ID_TOKEN_VERIFICATION" >
-        <ShortDescription>Using incomplete SDK-implemented ID Token validation.</ShortDescription>
+        <ShortDescription>Missing one or more of ID Token validation steps.</ShortDescription>
         <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
-            There are five values in the ID token response that must be verified. </LongDescription>
+            There are five values in the ID token response that must be verified todo1. </LongDescription>
         <Details>
             <![CDATA[
             <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
@@ -6541,17 +6539,17 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
              You may use an SDK-implemented validation if this implements all these checks.
              Otherwise it is recommended to do these comparisons yourself. </p>
             <pre>
-
+                // todo
             </pre>
             ]]>
         </Details>
     </BugPattern>
-    <BugCode abbrev="SECIIDTV"> You seem to be missing the specification-required ID Token validation in OpenID Connect.</BugCode>
+    <BugCode abbrev="SECIIDTV">Missing one or more of ID Token validation steps.</BugCode>
 
      <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN" >
         <ShortDescription>Passing ID Token to unknown foreign method</ShortDescription>
         <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
-            There are five values in the ID token response that must be verified.  </LongDescription>
+            There are five values in the ID token response that must be verified todo 3d.  </LongDescription>
         <Details>
             <![CDATA[
            <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
@@ -6563,12 +6561,31 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
              You may use an SDK-implemented validation if this implements all these checks.
              Otherwise it is recommended to do these comparisons yourself. </p>
               <pre>
-
+            // todo
             </pre>
             ]]>
         </Details>
     </BugPattern>
-    <BugCode abbrev="SECMVIDTEXT"> You seem to be missing the specification-required ID Token validation in OpenID Connect.</BugCode>
+    <BugCode abbrev="SECMVIDTEXT">You seem to be passing ID token somewhere, but we do not see any validation checks.</BugCode>
+  <BugPattern type="MISSING_VERIFY_NONCE" >
+        <ShortDescription>Missing verify Nonce</ShortDescription>
+        <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            The nonce is a cryptographically opaque value like the state value which binds an authentiaction request to the ID Token </LongDescription>
+        <Details>
+            <![CDATA[
+           <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            The nonce is one of the required values made to protect against replay attacks in token responses.
+             The nonce value serves pretty much the same purpose for the ID token response as State does for the authorization response.
+              Add nonce to your authentication request and store the value.
+              Check the nonce claim of the ID token against the stored value for validation. Error 401 must be returned if nonces do not match.</p>
+
+              <pre>
+            // todo
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECMVNONCE">You seem to be passing ID token somewhere, but we do not see any validation checks.</BugCode>
 
 
 </MessageCollection>

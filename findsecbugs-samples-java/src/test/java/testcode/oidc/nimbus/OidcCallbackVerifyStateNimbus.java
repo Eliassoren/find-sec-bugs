@@ -1,12 +1,6 @@
 package testcode.oidc.nimbus;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.oauth2.sdk.*;
-import com.nimbusds.oauth2.sdk.auth.ClientSecretBasic;
-import com.nimbusds.oauth2.sdk.auth.Secret;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.*;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
@@ -17,14 +11,9 @@ import sun.security.util.Cache;
 import testcode.oidc.otherexamples.OidcAuthenticationRequestStateUsageSample;
 import testcode.oidc.util.nimbus.OidcConfig;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.*;
 
 public class OidcCallbackVerifyStateNimbus {
@@ -126,7 +115,7 @@ public class OidcCallbackVerifyStateNimbus {
             OidcConfig oidcConfig = (OidcConfig)cache.get(appuuid);
             // FIXME: security error, missing state check
             // TODO: Control flow: The state must be checked between trigger AuthenticationResponse and this exit point. Maybe this is implicit with the existence...
-            OidcAuthenticationRequestStateUsageSample.stateMatcherHandleNoMatch(successResponse, oidcConfig.state);
+            OidcAuthenticationRequestStateUsageSample.matcherHandleNoMatch(successResponse, oidcConfig.state);
         } catch (NullPointerException | ClassCastException e) {
             // Error handling
             throw new SecurityException("Something went wrong during callback");

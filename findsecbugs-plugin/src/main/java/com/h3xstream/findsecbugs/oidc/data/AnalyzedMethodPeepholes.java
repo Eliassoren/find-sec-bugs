@@ -41,8 +41,7 @@ public class AnalyzedMethodPeepholes {
         this.calledMethodNameIndicatesVerify = calledMethodNameIndicatesVerify;
         notClearedAndPossiblyPassesCheck = foundContextWithParamToVerify
                                             && !foundParamVerify
-                                            && foundParamPassedToPossibleCheck
-                                            && !calledMethodNameIndicatesVerify;
+                                            && foundParamPassedToPossibleCheck;
     }
 }
 

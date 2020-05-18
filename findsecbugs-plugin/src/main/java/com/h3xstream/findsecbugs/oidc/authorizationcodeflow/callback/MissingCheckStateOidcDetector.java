@@ -164,15 +164,20 @@ public class MissingCheckStateOidcDetector implements Detector {
             if (methodGen == null || methodGen.getInstructionList() == null) {
                 continue; //No instruction .. nothing to do
             }
-            if(methodGen.getName().toLowerCase().contains("state")
-                    || Arrays.stream(m.getLocalVariableTable()
-                            .getLocalVariableTable())
-                            .anyMatch(name -> name.getName().matches(STATE_VARIABLE_NAME_REGEX)
-                                    || name.getSignature().contains("Lcom/nimbusds/oauth2/sdk/id/State;"))) {
-                // Localvariabletable
+            try {
+                if(methodGen.getName().toLowerCase().contains("state")
+                        || Arrays.stream(m.getLocalVariableTable()
+                        .getLocalVariableTable())
+                        .anyMatch(name -> name.getName().matches(STATE_VARIABLE_NAME_REGEX)
+                                || name.getSignature().contains("Lcom/nimbusds/oauth2/sdk/id/State;"))) {
+                    // Localvariabletable
 
-                stateInMethodName = true;
+                    stateInMethodName = true;
+                }
+            } catch (Exception e) {
+                // continue
             }
+
 
             for (InstructionHandle instructionHandle : methodGen.getInstructionList()) {
                 Instruction instruction = instructionHandle.getInstruction();
@@ -233,7 +238,7 @@ public class MissingCheckStateOidcDetector implements Detector {
         if(!methodCallersThatShouldHaveStateCheckForeignMethod.isEmpty()) {
             for(MethodAnnotation calledMethodAnnotation : methodCallersThatShouldHaveStateCheckForeignMethod.keySet()) {
                 AnalyzedMethodPeepholes analyzedMethod = methodCallersThatShouldHaveStateCheckForeignMethod.get(calledMethodAnnotation);
-                if(analyzedMethod.notClearedAndPossiblyPassesCheck) {
+                if(analyzedMethod.notClearedAndPossiblyPassesCheck && !analyzedMethod.calledMethodNameIndicatesVerify) {
                     reportInterproceduralMethodCall(
                             javaClass,
                             calledMethodAnnotation,
@@ -246,7 +251,7 @@ public class MissingCheckStateOidcDetector implements Detector {
         if(!methodCallersThatShouldHaveStateCheckForeignNotFound.isEmpty()) {
             for(CalledMethodIdentifiers calledMethodIdentifiers: methodCallersThatShouldHaveStateCheckForeignNotFound.keySet()) {
                 AnalyzedMethodPeepholes analyzedMethod = methodCallersThatShouldHaveStateCheckForeignNotFound.get(calledMethodIdentifiers);
-                if(analyzedMethod.notClearedAndPossiblyPassesCheck) {
+                if(analyzedMethod.notClearedAndPossiblyPassesCheck && !analyzedMethod.calledMethodNameIndicatesVerify) {
                     reportInterproceduralMethodCall(
                             javaClass,
                             calledMethodIdentifiers,

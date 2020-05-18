@@ -1,8 +1,6 @@
 package testcode.oidc.otherexamples;
 
 import com.nimbusds.oauth2.sdk.*;
-import com.nimbusds.oauth2.sdk.auth.ClientSecretBasic;
-import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
@@ -121,7 +119,7 @@ public class OidcAuthenticationRequestStateUsageSample {
     }
 
     // Doesn't check state. Expect bug.
-    public static void stateMatcherHandleNoMatch(AuthenticationSuccessResponse successResponse, State state) {
+    public static void matcherHandleNoMatch(AuthenticationSuccessResponse successResponse, State state) {
         successResponse.toParameters();
     }
 
@@ -149,7 +147,7 @@ public class OidcAuthenticationRequestStateUsageSample {
                 // process error
             }
             AuthenticationSuccessResponse successResponse =  response.toSuccessResponse();
-            stateMatcherHandleNoMatch(successResponse, state);
+            matcherHandleNoMatch(successResponse, state);
         } catch (URISyntaxException e) {
         } catch (IOException e) {
         } catch (ParseException e) {

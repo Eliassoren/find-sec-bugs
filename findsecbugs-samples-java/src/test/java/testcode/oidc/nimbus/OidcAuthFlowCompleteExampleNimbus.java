@@ -188,7 +188,7 @@ public class OidcAuthFlowCompleteExampleNimbus {
             String appuuid = UUID.fromString(httpAuthorizationCallback.getHeader("appuuid")).toString();
             OidcConfig oidcConfig = (OidcConfig)cache.get(appuuid);
             // FIXME: security error, missing state check
-            OidcAuthenticationRequestStateUsageSample.stateMatcherHandleNoMatch(successResponse, oidcConfig.state);
+            OidcAuthenticationRequestStateUsageSample.matcherHandleNoMatch(successResponse, oidcConfig.state);
             AuthorizationCode authorizationCode = successResponse.getAuthorizationCode();
             return OK_tokenRequestValidateIdToken(oidcConfig, authorizationCode);
         } catch (NullPointerException | ClassCastException e) {
