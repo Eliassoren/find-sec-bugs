@@ -30,7 +30,7 @@ public class ImproperTokenValidationDetectorTest extends BaseDetectorTest {
     public void forgotToCheckTokenTestGoogleApiClient() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oidc/googleapiclient/OidcValidateTokensGoogle")
+               getClassFilePath("testcode/oidc/googleapiclient/OidcValidateTokensGoogle")
         };
 
         //Run the analysis
@@ -46,9 +46,18 @@ public class ImproperTokenValidationDetectorTest extends BaseDetectorTest {
                         .inMethod("tokenRequestNoValidation")
                         .build()
         );
+    }
 
+    @Test
+    public void forgotToCheckTokenTestNimbusSDK() throws Exception {
+        //Locate test code
+        String[] files = {
+                getClassFilePath("testcode/oidc/nimbus/OidcValidateTokensNimbus")
+        };
 
-
+        //Run the analysis
+        EasyBugReporter reporter = spy(new BaseDetectorTest.SecurityReporter());
+        analyze(files, reporter);
 
     }
 }

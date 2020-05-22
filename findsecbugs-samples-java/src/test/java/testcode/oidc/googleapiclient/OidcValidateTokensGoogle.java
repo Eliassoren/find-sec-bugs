@@ -8,6 +8,7 @@ import com.google.api.client.auth.openidconnect.IdToken;
 import com.google.api.client.auth.openidconnect.IdTokenResponse;
 import com.google.api.client.auth.openidconnect.IdTokenVerifier;
 import com.google.api.client.http.GenericUrl;
+import com.google.api.client.json.Json;
 import com.google.api.client.util.Clock;
 import com.nimbusds.openid.connect.sdk.validators.AccessTokenValidator;
 import com.nimbusds.openid.connect.sdk.validators.InvalidHashException;
@@ -95,7 +96,10 @@ public class OidcValidateTokensGoogle {
                                                 .setAudience(Collections.singleton(authorizationCodeFlow.getClientId()))
                                                 .setIssuer(String.valueOf(providerMetadata.get("iss")))
                                                 .build();
+
+           // IdToken.parse(new Json(),  idTokenResponse.getIdToken());
             if(idTokenVerifier.verify(idTokenResponse.parseIdToken())) {
+                // new knowledge: the parse call performs jwt check.
                 // Fixme: verifier is missing nonce and jwt check
                 authorizationCodeFlow.createAndStoreCredential(idTokenResponse, oidcConfig.appuuid.toString());
                 return Response.ok()
@@ -258,7 +262,7 @@ public class OidcValidateTokensGoogle {
                         .entity("This request does not seem like it was meant for this audience.")
                         .build();
             }
-            if(!idToken.verifyExpirationTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)){
+            if(!idToken.verifyTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)){
                 return Response.status(Response.Status.UNAUTHORIZED)
                         .entity("Token expired.")
                         .build();

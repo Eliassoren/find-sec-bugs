@@ -49,8 +49,8 @@ public class ImproperTokenValidationDetector implements Detector {
     private static final InvokeMatcherBuilder
             TOKENREQUEST_EXECUTE_NIMBUS = invokeInstruction()
             .atClass("com/nimbusds/openid/connect/sdk/OIDCTokenResponseParser")
-            .atMethod("parse")
-            .withArgs("(Lcom/nimbusds/oauth2/sdk/http/HTTPResponse;)Lcom/nimbusds/oauth2/sdk/TokenResponse");
+            .atMethod("parse");
+           // .withArgs("(Lcom/nimbusds/oauth2/sdk/http/HTTPResponse;)Lcom/nimbusds/oauth2/sdk/TokenResponse");
 
     private static final InvokeMatcherBuilder
             TOKENREQUEST_EXECUTE_GOOGLE = invokeInstruction()
@@ -146,7 +146,7 @@ private static final InvokeMatcherBuilder
     private static final InvokeMatcherBuilder
         GOOGLE_VERIFY_EXP= invokeInstruction()
             .atClass("com/google/api/client/auth/openidconnect/IdToken")
-            .atMethod("verifyExpirationTime");
+            .atMethod("verifyTime", "verifyExpirationTime", "verifyIssuedAtTime"); // todo: add verify exptime and iat as variation
 
     private static final List<InvokeMatcherBuilder> TOKEN_VERIFY_REQUIRED_CHECKS = Arrays.asList(
             GOOGLE_VERIFY_ISSUER,
