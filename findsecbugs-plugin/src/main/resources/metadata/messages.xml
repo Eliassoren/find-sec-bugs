@@ -6569,7 +6569,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     <BugCode abbrev="SECMVIDTEXT">You seem to be passing ID token somewhere, but we do not see any validation checks.</BugCode>
   <BugPattern type="MISSING_VERIFY_NONCE" >
         <ShortDescription>Missing verify Nonce</ShortDescription>
-        <LongDescription>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+        <LongDescription>ID Tokens must be validated by the Relying Party (Client).
             The nonce is a cryptographically opaque value like the state value which binds an authentiaction request to the ID Token </LongDescription>
         <Details>
             <![CDATA[
@@ -6585,7 +6585,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
             ]]>
         </Details>
     </BugPattern>
-    <BugCode abbrev="SECMVNONCE">You seem to be passing ID token somewhere, but we do not see any validation checks.</BugCode>
+    <BugCode abbrev="SECMVNONCE">You seem to be missing validation of the anti-replay attack token nonce.</BugCode>
 
 
 </MessageCollection>
