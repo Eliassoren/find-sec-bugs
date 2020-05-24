@@ -290,6 +290,7 @@ public class TokenValidationCFGAnalysis implements Detector {
         //printCFGDetailsAnalysis(classContext);
         // printCFG(classContext);
         JavaClass javaClass = classContext.getJavaClass();
+
         for (Method m : javaClass.getMethods()) {
             MethodGen methodGen = classContext.getMethodGen(m);
             ConstantPoolGen cpg = classContext.getConstantPoolGen();

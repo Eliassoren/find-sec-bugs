@@ -17,6 +17,7 @@ import sun.security.util.Cache;
 import testcode.oidc.util.googleapiclient.OidcConfig;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -217,6 +218,7 @@ public class OidcValidateTokensGoogle {
             if(!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
                 String a = "";
                 a = a + publicKey.getAlgorithm();
+                throw new SecurityException("INvalid issues");
                 // FIXME BUG: no return
             }
             // .... other checks

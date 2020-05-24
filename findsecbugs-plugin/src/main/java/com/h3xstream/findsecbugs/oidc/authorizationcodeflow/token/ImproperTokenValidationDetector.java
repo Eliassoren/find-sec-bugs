@@ -41,7 +41,7 @@ public class ImproperTokenValidationDetector implements Detector {
     private static final String EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN = "EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN";
 
 
-
+    private List<InvokeMatcherBuilder> checksLeftToBeFound = new ArrayList<>();
     private Map<MethodAnnotation, AnalyzedMethodPeepholes> methodCallersThatShouldHaveCheckForeignMethod = new HashMap<>();
     private Map<CalledMethodIdentifiers, AnalyzedMethodPeepholes> methodCallersThatShouldHaveCheckForeignNotFound = new HashMap<>();
     private Map<Method, AnalyzedMethodPeepholes> methodCallersThatShouldHaveVerify = new HashMap<>();
@@ -214,6 +214,10 @@ private static final InvokeMatcherBuilder
     }
 
     private void verifyThatAllChecksAreThere(Method m, MethodGen methodGen, ConstantPoolGen cpg) {
+        // Todo: interprocedural check instead, use class-global list
+        // Search this list for remaning checks instead of these five bools. T
+        // Look at ID token verified addd iss as aud as additional things that fix.
+        // pop list when found check in class
         boolean foundVerifyIss = false;
         boolean foundVerifyAud = false;
         boolean foundVerifySignatureCrypto = false;
@@ -309,6 +313,8 @@ private static final InvokeMatcherBuilder
         boolean tokenInMethodSignature = false;
         boolean foundIncompleteValidatorSDK = false;
         Method[] methods = javaClass.getMethods();
+        checksLeftToBeFound = new ArrayList<>(TOKEN_VERIFY_REQUIRED_CHECKS);
+        checksLeftToBeFound.add(STRING_EQUALS);
         List<Method> methodsWithVerify = new ArrayList<>();
         List<Method> methodsRequireAllTokenChecks = new ArrayList<>();
         methodCallersThatShouldHaveCheckForeignMethod = new HashMap<>();
