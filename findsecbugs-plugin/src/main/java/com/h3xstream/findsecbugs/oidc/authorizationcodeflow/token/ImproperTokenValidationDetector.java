@@ -35,13 +35,24 @@ import static com.h3xstream.findsecbugs.common.matcher.InstructionDSL.invokeInst
 public class ImproperTokenValidationDetector implements Detector {
     private final BugReporter bugReporter;
     private static final String MISSING_VERIFY_ID_TOKEN = "MISSING_VERIFY_ID_TOKEN";
-    private static final String MISSING_VERIFY_NONCE = "MISSING_VERIFY_NONCE";
-    private static final String INCOMPLETE_ID_TOKEN_VERIFICATION = "INCOMPLETE_ID_TOKEN_VERIFICATION";
-    private static final String USING_INCOMPLETE_ID_TOKEN_VALIDATOR = "USING_INCOMPLETE_ID_TOKEN_VALIDATOR";
     private static final String EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN = "EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN";
 
+    private static final String MISSING_VERIFY_NONCE = "MISSING_VERIFY_NONCE";
+    private static final String MISSING_VERIFY_TOKEN_ISS = "MISSING_VERIFY_TOKEN_ISS";
+    private static final String MISSING_VERIFY_TOKEN_AUD = "MISSING_VERIFY_TOKEN_AUD";
+    private static final String MISSING_VERIFY_TOKEN_SIGN = "MISSING_VERIFY_TOKEN_SIGN";
+    private static final String MISSING_VERIFY_TOKEN_EXP = "MISSING_VERIFY_TOKEN_EXP";
+    private static final String INCOMPLETE_ID_TOKEN_VERIFICATION = "INCOMPLETE_ID_TOKEN_VERIFICATION";
 
-    private List<InvokeMatcherBuilder> checksLeftToBeFound = new ArrayList<>();
+
+    private static final String USING_INCOMPLETE_ID_TOKEN_VALIDATOR = "USING_INCOMPLETE_ID_TOKEN_VALIDATOR";
+
+
+
+
+
+    private List<String> missingTokenChecks;
+
     private Map<MethodAnnotation, AnalyzedMethodPeepholes> methodCallersThatShouldHaveCheckForeignMethod = new HashMap<>();
     private Map<CalledMethodIdentifiers, AnalyzedMethodPeepholes> methodCallersThatShouldHaveCheckForeignNotFound = new HashMap<>();
     private Map<Method, AnalyzedMethodPeepholes> methodCallersThatShouldHaveVerify = new HashMap<>();
@@ -95,10 +106,20 @@ public class ImproperTokenValidationDetector implements Detector {
             .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier")
             .atMethod("verify")
             .withArgs("(Lcom/google/api/client/auth/openidconnect/IdToken;)Z");
-
-private static final InvokeMatcherBuilder
+    private static final InvokeMatcherBuilder
+            GOOGLE_VERIFY_AUD_SDK = invokeInstruction()
+            .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier$Builder")
+            .atMethod("setAudience");
+    private static final InvokeMatcherBuilder
+            GOOGLE_VERIFY_ISS_SDK = invokeInstruction()
+            .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier$Builder")
+            .atMethod("setIssuer"); private static final InvokeMatcherBuilder
+            GOOGLE_VERIFY_EXP_SDK = invokeInstruction()
+            .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier$Builder")
+            .atMethod("setAcceptableTimeSkewSeconds");
+    private static final InvokeMatcherBuilder
             GOOGLE_INTERNAL_TOKEN_VERIFY_SDK = invokeInstruction() // missing nonce check but has crypto
-            .atClass("com/google/api/client/googleapis/auth/oauth2/GoogleIdTokenVerifier")
+            .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier")
             .atMethod("verify")
             .withArgs("(Lcom/google/api/client/auth/openidconnect/IdToken;)Z");
 
@@ -131,11 +152,13 @@ private static final InvokeMatcherBuilder
             .atClass("com/google/api/client/auth/openidconnect/IdToken")
             .atMethod("verifyIssuer")
             .withArgs("(Ljava/lang/String;)Z");
+
     private static final InvokeMatcherBuilder
         GOOGLE_VERIFY_AUD = invokeInstruction()
             .atClass("com/google/api/client/auth/openidconnect/IdToken")
             .atMethod("verifyAudience")
             .withArgs("(Ljava/util/Collection;)Z");
+
 
     private static final InvokeMatcherBuilder
         GOOGLE_VERIFY_SIGNATURE= invokeInstruction()
@@ -150,7 +173,9 @@ private static final InvokeMatcherBuilder
 
     private static final List<InvokeMatcherBuilder> TOKEN_VERIFY_REQUIRED_CHECKS = Arrays.asList(
             GOOGLE_VERIFY_ISSUER,
+            GOOGLE_VERIFY_ISS_SDK,
             GOOGLE_VERIFY_AUD,
+            GOOGLE_VERIFY_AUD_SDK,
             GOOGLE_VERIFY_SIGNATURE,
             GOOGLE_VERIFY_EXP
     );
@@ -173,7 +198,11 @@ private static final InvokeMatcherBuilder
         return foundTokenVerifyMethod || hasVerifyNonce(methodGen, cpg);
     }
 
-
+    private void addMethodToListNoDuplicates(Method method, List<Method> methods) {
+        if(!methods.contains(method)) {
+            methods.add(method);
+        }
+    }
 
     private boolean looksLikeValidTokenSDKVerify(Instruction instruction, ConstantPoolGen cpg, boolean indicationsOfVariableToVerify) {
         return (TOKEN_VERIFY_SDK_VARIATIONS.stream().anyMatch(i -> i.matches(instruction, cpg)));
@@ -213,11 +242,7 @@ private static final InvokeMatcherBuilder
        return hasGetNonce && hasStringEquals;
     }
 
-    private void verifyThatAllChecksAreThere(Method m, MethodGen methodGen, ConstantPoolGen cpg) {
-        // Todo: interprocedural check instead, use class-global list
-        // Search this list for remaning checks instead of these five bools. T
-        // Look at ID token verified addd iss as aud as additional things that fix.
-        // pop list when found check in class
+    private boolean verifyThatAllChecksAreThere(Method m, MethodGen methodGen, ConstantPoolGen cpg) {
         boolean foundVerifyIss = false;
         boolean foundVerifyAud = false;
         boolean foundVerifySignatureCrypto = false;
@@ -225,37 +250,49 @@ private static final InvokeMatcherBuilder
         boolean foundVerifyExp = false;
 
         if (methodGen == null || methodGen.getInstructionList() == null) {
-            return; //No instruction .. nothing to do
+            return false; //No instruction .. nothing to do
         }
         for (InstructionHandle instructionHandle : methodGen.getInstructionList()) {
             Instruction instruction = instructionHandle.getInstruction();
             if (!(instruction instanceof InvokeInstruction)) {
                 continue;
             }
-            if(GOOGLE_VERIFY_ISSUER.matches(instruction, cpg)) {
+            if(GOOGLE_VERIFY_ISSUER.matches(instruction, cpg) || GOOGLE_VERIFY_ISS_SDK.matches(instruction, cpg)) {
                 foundVerifyIss = true;
-            } else if(GOOGLE_VERIFY_AUD.matches(instruction, cpg)) {
+                missingTokenChecks.remove(MISSING_VERIFY_TOKEN_ISS);
+            } else if(GOOGLE_VERIFY_AUD.matches(instruction, cpg) || GOOGLE_VERIFY_AUD_SDK.matches(instruction, cpg)) {
                 foundVerifyAud = true;
+                missingTokenChecks.remove(MISSING_VERIFY_TOKEN_AUD);
             } else if(GOOGLE_VERIFY_SIGNATURE.matches(instruction, cpg)) {
                 foundVerifySignatureCrypto = true;
-            } else if(GOOGLE_VERIFY_EXP.matches(instruction, cpg)) {
+                missingTokenChecks.remove(MISSING_VERIFY_TOKEN_SIGN);
+            } else if(GOOGLE_VERIFY_EXP.matches(instruction, cpg)
+                    || GOOGLE_VERIFY_EXP_SDK.matches(instruction, cpg)
+                    || GOOGLE_TOKEN_VERIFY_SDK.matches(instruction, cpg) ) {
+                missingTokenChecks.remove(MISSING_VERIFY_TOKEN_EXP);
                 foundVerifyExp = true;
             }
         }
 
+        foundVerifyNonce = hasVerifyNonce(methodGen, cpg);
+        if(foundVerifyNonce) {
+            missingTokenChecks.remove(MISSING_VERIFY_NONCE);
+        }
         boolean completeVerify = foundVerifyIss
                                 && foundVerifyAud
                                 && foundVerifySignatureCrypto
-                                && foundVerifyExp;
+                                && foundVerifyExp
+                                && foundVerifyNonce;
 
         if(!completeVerify) {
             bugReporter.reportBug(new BugInstance(this, INCOMPLETE_ID_TOKEN_VERIFICATION, Priorities.NORMAL_PRIORITY)
                     .addClassAndMethod(javaClass, m));
+            for (String MISSING_TOKEN_CHECK : missingTokenChecks) {
+                bugReporter.reportBug(new BugInstance(this, MISSING_TOKEN_CHECK, Priorities.NORMAL_PRIORITY)
+                        .addClassAndMethod(javaClass, m));
+            }
         }
-        if(!hasVerifyNonce(methodGen, cpg)) {
-            bugReporter.reportBug(new BugInstance(this, MISSING_VERIFY_NONCE, Priorities.NORMAL_PRIORITY)
-                    .addClassAndMethod(javaClass, m));
-        }
+        return completeVerify;
     }
 
     private boolean looksLikeIdTokenPassedParam(InvokeInstruction invokeInstruction, ConstantPoolGen cpg, boolean foundGetState) {
@@ -313,14 +350,18 @@ private static final InvokeMatcherBuilder
         boolean tokenInMethodSignature = false;
         boolean foundIncompleteValidatorSDK = false;
         Method[] methods = javaClass.getMethods();
-        checksLeftToBeFound = new ArrayList<>(TOKEN_VERIFY_REQUIRED_CHECKS);
-        checksLeftToBeFound.add(STRING_EQUALS);
         List<Method> methodsWithVerify = new ArrayList<>();
         List<Method> methodsRequireAllTokenChecks = new ArrayList<>();
         methodCallersThatShouldHaveCheckForeignMethod = new HashMap<>();
         methodCallersThatShouldHaveCheckForeignNotFound = new HashMap<>();
         methodCallersThatShouldHaveVerify = new HashMap<>();
-
+        missingTokenChecks = new ArrayList<>(Arrays.asList(
+                MISSING_VERIFY_NONCE,
+                MISSING_VERIFY_TOKEN_ISS,
+                MISSING_VERIFY_TOKEN_AUD,
+                MISSING_VERIFY_TOKEN_SIGN,
+                MISSING_VERIFY_TOKEN_EXP
+        ));
         // Call to a method where state param is called, and caller.
 
         for (Method m : methods) {
@@ -365,13 +406,15 @@ private static final InvokeMatcherBuilder
                     foundGetIdToken = true;
                 } else if(looksLikeValidTokenSDKVerify(instruction, cpg, tokenVerifyIndications)) {
                     foundTokenVerifyCall = true;
-                    methodsWithVerify.add(m);
+                    addMethodToListNoDuplicates(m, methodsWithVerify);
                 } else if(looksLikeManualTokenVerify(methodGen, cpg) && !foundTokenVerifyCall) {
                     foundTokenVerifyCall = true;
-                    methodsWithVerify.add(m);
-                    methodsRequireAllTokenChecks.add(m);
+                    addMethodToListNoDuplicates(m, methodsWithVerify);
+                    addMethodToListNoDuplicates(m, methodsRequireAllTokenChecks);
                 } else if(INCOMPLETE_TOKEN_VERIFY_SDK_METHOD.stream().anyMatch(v -> v.matches(instruction, cpg))) {
-                   foundIncompleteValidatorSDK = true;
+                    foundIncompleteValidatorSDK = true;
+                    foundTokenVerifyCall = true;
+                    addMethodToListNoDuplicates(m, methodsRequireAllTokenChecks);
                 }
 
                 if(looksLikeIdTokenPassedParam(invokeInstruction, cpg, foundGetIdToken)
@@ -395,29 +438,22 @@ private static final InvokeMatcherBuilder
                 }
             }
 
-            if(foundIncompleteValidatorSDK) {
-                if(!hasVerifyNonce(methodGen, cpg)) {
-                    bugReporter.reportBug(new BugInstance(this, USING_INCOMPLETE_ID_TOKEN_VALIDATOR, Priorities.NORMAL_PRIORITY)
-                            .addClassAndMethod(javaClass, m));
-                    bugReporter.reportBug(new BugInstance(this, MISSING_VERIFY_NONCE, Priorities.NORMAL_PRIORITY)
-                            .addClassAndMethod(javaClass, m));
-                } else if(!hasVerifySignature(methodGen, cpg)) {
-                    bugReporter.reportBug(new BugInstance(this, USING_INCOMPLETE_ID_TOKEN_VALIDATOR, Priorities.NORMAL_PRIORITY)
-                            .addClassAndMethod(javaClass, m));
-                }
-            }
-
-
             if (foundTokenRequest && !foundTokenVerifyCall && !foundTokenPassedAsParamToPossibleCheck) {
                 bugReporter.reportBug(new BugInstance(this, MISSING_VERIFY_ID_TOKEN, Priorities.HIGH_PRIORITY)
                         .addClassAndMethod(javaClass, m));
+            }
+
+            if(foundIncompleteValidatorSDK) {
+                if( !verifyThatAllChecksAreThere(m, methodGen, cpg)) {
+                    bugReporter.reportBug(new BugInstance(this, USING_INCOMPLETE_ID_TOKEN_VALIDATOR, Priorities.NORMAL_PRIORITY)
+                            .addClassAndMethod(javaClass, m));
+                }
+                methodsRequireAllTokenChecks.remove(m);
             }
         }
 
         if(!methodsRequireAllTokenChecks.isEmpty()) {
             for(Method m: methodsRequireAllTokenChecks) {
-                // TODO: for the incomplete libraries it is still okay to use validate() but implementing the additional checks.
-                // if using googletokenverifier, check that it still is doing nonce check.
                 verifyThatAllChecksAreThere(m, classContext.getMethodGen(m), classContext.getConstantPoolGen());
             }
         }

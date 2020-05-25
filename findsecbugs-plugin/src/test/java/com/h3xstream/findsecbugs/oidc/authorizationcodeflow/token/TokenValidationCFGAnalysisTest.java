@@ -27,7 +27,7 @@ public class TokenValidationCFGAnalysisTest extends BaseDetectorTest {
     public void improperReturnAfterAllFiveConditionalTest() throws Exception {
         //Locate test code
         String[] files = {
-              getClassFilePath("testcode/oidc/googleapiclient/OidcValidateTokensGoogle")
+              getClassFilePath("testcode/oidc/googleapiclient/OidcValidateTokensGoogleControlFlow")
 
                // getClassFilePath("testcode/oidc/otherexamples/SimpleCFG")
         };

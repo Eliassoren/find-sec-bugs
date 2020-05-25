@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 
 public class ImproperTokenValidationDetectorTest extends BaseDetectorTest {
 
+
     @Test
     public void forgotToCheckTokenTestGoogleApiClient() throws Exception {
         //Locate test code

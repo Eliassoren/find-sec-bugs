@@ -26,3 +26,6 @@ target/
 
 #Tests artifacts
 plugin/derived-config.txt
+
+# Evaluation files that do not go into tests. Used because I failed to build plugin properly to run in IDE
+findsecbugs-samples-java/src/test/java/testcode/oidc/gitignore/*

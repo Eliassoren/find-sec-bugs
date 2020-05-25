@@ -139,7 +139,7 @@
     <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token.TokenValidationCFGAnalysis"
               reports="IMPROPER_TOKEN_VERIFY_CONTROL_FLOW,REVERSED_IF_EQUALS_ID_TOKEN_VERIFY"/>
     <Detector class="com.h3xstream.findsecbugs.oidc.authorizationcodeflow.token.ImproperTokenValidationDetector"
-              reports="MISSING_VERIFY_ID_TOKEN,INCOMPLETE_ID_TOKEN_VERIFICATION,USING_INCOMPLETE_ID_TOKEN_VALIDATOR,EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN,MISSING_VERIFY_NONCE"/>
+              reports="MISSING_VERIFY_ID_TOKEN,INCOMPLETE_ID_TOKEN_VERIFICATION,USING_INCOMPLETE_ID_TOKEN_VALIDATOR,EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN,MISSING_VERIFY_NONCE,MISSING_VERIFY_TOKEN_ISS,MISSING_VERIFY_TOKEN_AUD,MISSING_VERIFY_TOKEN_SIGN,MISSING_VERIFY_TOKEN_EXP"/>
 
     <BugPattern type="HTTP_PARAMETER_POLLUTION" abbrev="SECHPP" category="SECURITY"/>
     <BugPattern type="SMTP_HEADER_INJECTION" abbrev="SECSMTP" category="SECURITY"/>
@@ -288,4 +288,8 @@
     <BugPattern type="INCOMPLETE_ID_TOKEN_VERIFICATION" abbrev="SECIIDTV" category="SECURITY"/>
     <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN" abbrev="SECMVIDTEXT" category="SECURITY"/>
     <BugPattern type="MISSING_VERIFY_NONCE" abbrev="SECMVNONCE" category="SECURITY"/>
+    <BugPattern type="MISSING_VERIFY_TOKEN_ISS" abbrev="SECMVTISSU" category="SECURITY"/>
+    <BugPattern type="MISSING_VERIFY_TOKEN_AUD" abbrev="SECMVAUD" category="SECURITY"/>
+    <BugPattern type="MISSING_VERIFY_TOKEN_SIGN" abbrev="SECMVTSIGN" category="SECURITY"/>
+    <BugPattern type="MISSING_VERIFY_TOKEN_EXP" abbrev="SECMVTEXP" category="SECURITY"/>
 </FindbugsPlugin>

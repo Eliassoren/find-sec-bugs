@@ -74,6 +74,7 @@ public class TokenValidationCFGAnalysis implements Detector {
             GOOGLE_ID_TOKEN_VER_AUD = invokeInstruction()
                 .atClass("com/google/api/client/auth/openidconnect/IdToken")
                 .atMethod("verifyAudience");
+
     private final InvokeMatcherBuilder
             GOOGLE_ID_TOKEN_VER_EXP = invokeInstruction()
                 .atClass("com/google/api/client/auth/openidconnect/IdToken")
@@ -142,10 +143,12 @@ public class TokenValidationCFGAnalysis implements Detector {
     }
 
     private BasicBlock searchReturnBlockAfterConditional(BasicBlock basicBlock, CFG cfg, ConstantPoolGen cpg, int depthSafetyCounter, ReturnBlockTrail returnBlockTrail) {
+        if(basicBlock == null || cfg == null) return null;
 
         Edge ft = cfg.getOutgoingEdgeWithType(basicBlock, EdgeTypes.FALL_THROUGH_EDGE);
+        if(ft == null) return null;
         BasicBlock targetBlock = ft.getTarget();
-
+        if(targetBlock == null) return null;
         Iterable<InstructionHandle> iterableIns = () -> targetBlock.instructionIterator();
 
         if(isTokenVerifyBlock(targetBlock, cfg, cpg)) {
@@ -178,6 +181,7 @@ public class TokenValidationCFGAnalysis implements Detector {
             returnBlockTrail.setFoundReturnStatement(true);
             return targetBlock;
         }
+
         if(depthSafetyCounter > 25) return null;
         return searchReturnBlockAfterConditional(targetBlock, cfg, cpg, depthSafetyCounter+1, returnBlockTrail);
     }
@@ -367,7 +371,6 @@ public class TokenValidationCFGAnalysis implements Detector {
                         }
                     });
                     basicBlockIterator.forEachRemaining(b -> {
-
                                 Edge ft = cfg.getOutgoingEdgeWithType(b, EdgeTypes.FALL_THROUGH_EDGE);
                                 Edge ifed = cfg.getOutgoingEdgeWithType(b, EdgeTypes.IFCMP_EDGE);
                                 Iterable<InstructionHandle> iterableIns = () -> b.instructionIterator();

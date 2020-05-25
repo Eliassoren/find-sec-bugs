@@ -6587,5 +6587,77 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECMVNONCE">You seem to be missing validation of the anti-replay attack token nonce.</BugCode>
 
+ <BugPattern type="MISSING_VERIFY_TOKEN_ISS" >
+        <ShortDescription>Missing verify iss parameter in ID Token</ShortDescription>
+        <LongDescription>ID Tokens must be validated by the Relying Party (Client).
+            iss parameter validation
+             </LongDescription>
+        <Details>
+            <![CDATA[
+           <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            iss parameter validation</p>
+
+              <pre>
+            // todo
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECMVTISSU">You seem to be missing validation of iss parameter in the ID token.</BugCode>
+
+ <BugPattern type="MISSING_VERIFY_TOKEN_AUD" >
+        <ShortDescription>Missing verify aud parameter in ID token</ShortDescription>
+        <LongDescription>ID Tokens must be validated by the Relying Party (Client).
+            aud parameter validation
+            </LongDescription>
+        <Details>
+            <![CDATA[
+           <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+           aud parameter validation</p>
+
+              <pre>
+            // todo
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECMVAUD">You seem to be missing validation of the aud parameter in the ID token.</BugCode>
+
+ <BugPattern type="MISSING_VERIFY_TOKEN_SIGN" >
+        <ShortDescription>Missing verify cryprographic signature in ID token</ShortDescription>
+        <LongDescription>ID Tokens must be validated by the Relying Party (Client).
+            Cryptographic validation
+            </LongDescription>
+        <Details>
+            <![CDATA[
+           <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            Cryptographic validation</p>
+
+              <pre>
+            // todo
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECMVTSIGN">You seem to be missing validation of the ID Token's cryptographic signature.</BugCode>
+
+ <BugPattern type="MISSING_VERIFY_TOKEN_EXP" >
+        <ShortDescription>Missing verify freshness of ID token</ShortDescription>
+        <LongDescription>ID Tokens must be validated by the Relying Party (Client).
+            Freshness validations
+             </LongDescription>
+        <Details>
+            <![CDATA[
+           <p>According the OpenID Connect specification, ID Tokens must be validated by the Relying Party (Client).
+            Freshness validation</p>
+
+              <pre>
+            // todo
+            </pre>
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECMVTEXP">You seem to be missing validation of the exp or iat parameters in the ID token.</BugCode>
+
 
 </MessageCollection>
