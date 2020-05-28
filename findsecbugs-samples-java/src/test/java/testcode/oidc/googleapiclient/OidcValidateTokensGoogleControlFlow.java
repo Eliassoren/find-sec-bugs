@@ -87,7 +87,7 @@ public class OidcValidateTokensGoogleControlFlow {
         return Response.status(Response.Status.UNAUTHORIZED).build();
     }
 
-    public Response validateTokensReversedIfConditional(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
+  /*  public Response validateTokensReversedIfConditional(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
         try {
             IdToken idToken = tokenResponse.parseIdToken(); // Parse
             if (idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
@@ -107,7 +107,6 @@ public class OidcValidateTokensGoogleControlFlow {
         }
     }
 
-
     public Response validateTokensNotControlFlow(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
         try {
             PublicKey publicKey = (PublicKey) providerMetadata.get("key");
@@ -123,7 +122,6 @@ public class OidcValidateTokensGoogleControlFlow {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
     }
-
     public Response validateTokensIncorrectReturn(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
         try {
             PublicKey publicKey = (PublicKey) providerMetadata.get("key");
@@ -144,7 +142,50 @@ public class OidcValidateTokensGoogleControlFlow {
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
+    }*/
+
+    public Response validateTokensCompleteReverseIfEquals(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
+        try {
+            PublicKey publicKey = (PublicKey) providerMetadata.get("key"); // fix codeexample
+            IdToken idToken = tokenResponse.parseIdToken(); // Parse
+            if (!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The provided nonce did not match the one saved from the authorization request.")
+                        .build();
+            }
+            if (idToken.verifySignature(publicKey)) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The jwt signature is not valid.")
+                        .build();
+            }
+            if (!idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("This request does not seem like it was meant for this audience.")
+                        .build();
+            }
+            if (!idToken.verifyTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Token expired.")
+                        .build();
+            }
+            if (!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("The expected issuer did not match.")
+                        .build();
+            }
+            // .... other checks
+            authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
+
+            return Response.ok()
+                    .entity(tokenResponse)
+                    .build();
+        } catch (IOException | GeneralSecurityException | ClassCastException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
     }
+
 
     public Response validateTokensCompleteIncorrectReturn(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
         try {
@@ -171,7 +212,7 @@ public class OidcValidateTokensGoogleControlFlow {
             if (!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
                 String a = "";
                 a = a + publicKey.getAlgorithm();
-                throw new SecurityException("INvalid issues");
+                //throw new SecurityException("INvalid issues");
                 // FIXME BUG: no return
             }
             // .... other checks
@@ -223,6 +264,38 @@ public class OidcValidateTokensGoogleControlFlow {
                 return Response.status(Response.Status.UNAUTHORIZED)
                         .entity("The expected issuer did not match.")
                         .build();
+            }
+            // .... other checks
+            authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());
+
+            return Response.ok()
+                    .entity(tokenResponse)
+                    .build();
+        } catch (IOException | GeneralSecurityException | ClassCastException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    public Response OK_validateTokensThrow(IdTokenResponse tokenResponse, OidcConfig oidcConfig) {
+        try {
+            PublicKey publicKey = (PublicKey) providerMetadata.get("key"); // fix codeexample
+            IdToken idToken = tokenResponse.parseIdToken(); // Parse
+            if (!oidcConfig.nonce.equals(idToken.getPayload().getNonce())) {
+                throw new SecurityException("The provided nonce did not match the one saved from the authorization request.");
+            }
+            if (!idToken.verifySignature(publicKey)) {
+                throw new SecurityException("The jwt signature is not valid.");
+            }
+            if (!idToken.verifyAudience(Collections.singleton(config.getProperty("clientId")))) {
+                throw new SecurityException("This request does not seem like it was meant for this audience.");
+            }
+            if (!idToken.verifyTime(Instant.now().toEpochMilli(), DEFAULT_TIME_SKEW_SECONDS)) {
+                throw new SecurityException("Token expired.");
+            }
+            if (!idToken.verifyIssuer(String.valueOf(providerMetadata.get("issuer")))) {
+                throw new SecurityException("The expected issuer did not match.");
             }
             // .... other checks
             authorizationCodeFlow.createAndStoreCredential(tokenResponse, oidcConfig.appuuid.toString());

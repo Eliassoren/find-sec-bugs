@@ -78,7 +78,8 @@ public class TokenValidationCFGAnalysis implements Detector {
     private final InvokeMatcherBuilder
             GOOGLE_ID_TOKEN_VER_EXP = invokeInstruction()
                 .atClass("com/google/api/client/auth/openidconnect/IdToken")
-                .atMethod("verifyExpirationTime");
+                .atMethod("verifyExpirationTime","verifyTime","verifyIssuedAtTime");
+
     private final InvokeMatcherBuilder
             GOOGLE_ID_TOKEN_VER_ISS = invokeInstruction()
                 .atClass("com/google/api/client/auth/openidconnect/IdToken")
@@ -157,13 +158,28 @@ public class TokenValidationCFGAnalysis implements Detector {
         }
 
         boolean foundHttpResponseStatus = StreamSupport.stream(iterableIns.spliterator(), false)
-                .anyMatch(i -> RESPONSE_STATUS.matches(i.getInstruction(), cpg));
+                .anyMatch(i -> {
+                    if(RESPONSE_STATUS.matches(i.getInstruction(), cpg)) {
+                        return true;
+                    } else if(i.getInstruction() instanceof InvokeInstruction) {
+                        InvokeInstruction newThrow = (InvokeInstruction) i.getInstruction();
+                        return newThrow.getName(cpg).contains("Exception");
+                    } else if(i.getInstruction() instanceof ATHROW) {
+                        return true;
+                    }
+                    return false;
+                } );
 
         boolean foundHttp400sCode = StreamSupport.stream(iterableIns.spliterator(), false)
                 .anyMatch(i -> {
                     if(i.getInstruction() instanceof GETSTATIC) {
                         FieldInstruction getstatic = (GETSTATIC) i.getInstruction();
                         return getstatic.getFieldName(cpg).equals("UNAUTHORIZED");
+                    } else if(i.getInstruction() instanceof InvokeInstruction) {
+                        InvokeInstruction newThrow = (InvokeInstruction) i.getInstruction();
+                        return newThrow.getName(cpg).contains("Exception");
+                    } else if(i.getInstruction() instanceof ATHROW) {
+                        return true;
                     }
                     return false;
                 });
@@ -197,13 +213,14 @@ public class TokenValidationCFGAnalysis implements Detector {
      private boolean isReturnBlock(BasicBlock basicBlock, CFG cfg) {
 
             Edge ret = cfg.getOutgoingEdgeWithType(basicBlock, EdgeTypes.RETURN_EDGE);
-
+            Edge athrow = cfg.getOutgoingEdgeWithType(basicBlock, EdgeTypes.HANDLED_EXCEPTION_EDGE);
             Iterable<InstructionHandle> iterableIns = () -> basicBlock.instructionIterator();
 
             boolean foundReturnStatement = StreamSupport.stream(iterableIns.spliterator(), false)
                     .anyMatch(i -> i.getInstruction().getOpcode() == Const.ARETURN);
-
-            return ret != null && foundReturnStatement;
+            boolean foundThrowStatement = StreamSupport.stream(iterableIns.spliterator(), false)
+                    .anyMatch(i -> i.getInstruction().getOpcode() == Const.ATHROW);
+            return (ret != null && foundReturnStatement) || (athrow != null && foundThrowStatement);
         }
 
 
@@ -292,7 +309,7 @@ public class TokenValidationCFGAnalysis implements Detector {
     @Override
     public void visitClassContext(ClassContext classContext) {
         //printCFGDetailsAnalysis(classContext);
-        // printCFG(classContext);
+        //printCFG(classContext);
         JavaClass javaClass = classContext.getJavaClass();
 
         for (Method m : javaClass.getMethods()) {
@@ -334,7 +351,7 @@ public class TokenValidationCFGAnalysis implements Detector {
 
     private void printCFG(ClassContext classContext) {
         for (Method m : classContext.getJavaClass().getMethods())
-            if(m.getName().contains("validateTokensIncorrectReturn") || m.getName().equals("simpleCFGAnalyzed1") || m.getName().equals("simpleCFGAnalyzed2")) {
+            if(m.getName().contains("OK_validateTokensThrow") || m.getName().equals("simpleCFGAnalyzed1") || m.getName().equals("simpleCFGAnalyzed2")) {
                 try {
                     CFG cfg =  classContext.getCFG(m);
                     printer = new CFGPrinter(cfg);
