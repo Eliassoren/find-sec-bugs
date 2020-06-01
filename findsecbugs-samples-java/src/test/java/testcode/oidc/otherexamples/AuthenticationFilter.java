@@ -10,7 +10,6 @@ import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import net.minidev.json.JSONArray;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
@@ -31,7 +30,6 @@ import static java.util.stream.Collectors.toSet;
 public class AuthenticationFilter implements ContainerRequestFilter {
     private boolean authEnabled = true; // Replaced config var
     private final List<IDTokenValidator> idTokenValidators;
-    private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
     private final PermissionService permissionService;
 
     public AuthenticationFilter(PermissionService permissionService) throws MalformedURLException {
