@@ -29,6 +29,7 @@ import org.apache.bcel.classfile.Method;
 import org.apache.bcel.generic.*;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static com.h3xstream.findsecbugs.common.matcher.InstructionDSL.invokeInstruction;
 
@@ -113,10 +114,12 @@ public class ImproperTokenValidationDetector implements Detector {
     private static final InvokeMatcherBuilder
             GOOGLE_VERIFY_ISS_SDK = invokeInstruction()
             .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier$Builder")
-            .atMethod("setIssuer"); private static final InvokeMatcherBuilder
+            .atMethod("setIssuer");
+    private static final InvokeMatcherBuilder
             GOOGLE_VERIFY_EXP_SDK = invokeInstruction()
             .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier$Builder")
             .atMethod("setAcceptableTimeSkewSeconds");
+
     private static final InvokeMatcherBuilder
             GOOGLE_INTERNAL_TOKEN_VERIFY_SDK = invokeInstruction() // missing nonce check but has crypto
             .atClass("com/google/api/client/auth/openidconnect/IdTokenVerifier")
@@ -124,8 +127,8 @@ public class ImproperTokenValidationDetector implements Detector {
             .withArgs("(Lcom/google/api/client/auth/openidconnect/IdToken;)Z");
 
 
-    private static final String TOKEN_VARIABLE_NAME_REGEX_PATTERN = "token"; // TODO: add possible variations
-    private static final String VERIFY_REGEXPATTERN = ".*verify|valid.*"; // TODO: add possible variations
+    private static final String TOKEN_VARIABLE_NAME_REGEX_PATTERN = ".*token|Token.*"; // TODO: add possible variations
+    private static final String VERIFY_REGEXPATTERN = ".*verify|Verify|valid|Valid.*"; // TODO: add possible variations
 
 
     private static final List<InvokeMatcherBuilder> INCOMPLETE_TOKEN_VERIFY_SDK_METHOD = Arrays.asList(
@@ -150,8 +153,7 @@ public class ImproperTokenValidationDetector implements Detector {
     private static final InvokeMatcherBuilder
         GOOGLE_VERIFY_ISSUER = invokeInstruction()
             .atClass("com/google/api/client/auth/openidconnect/IdToken")
-            .atMethod("verifyIssuer")
-            .withArgs("(Ljava/lang/String;)Z");
+            .atMethod("verifyIssuer");
 
     private static final InvokeMatcherBuilder
         GOOGLE_VERIFY_AUD = invokeInstruction()
@@ -298,7 +300,9 @@ public class ImproperTokenValidationDetector implements Detector {
     private boolean looksLikeIdTokenPassedParam(InvokeInstruction invokeInstruction, ConstantPoolGen cpg, boolean foundGetState) {
         boolean idTokenParameterNimbus =
                  (invokeInstruction.getSignature(cpg).contains("Lcom/nimbusds/oauth2/sdk/TokenResponse;")
-                         && !invokeInstruction.getSignature(cpg).endsWith("Lcom/nimbusds/oauth2/sdk/TokenResponse;"));
+                         && !invokeInstruction.getSignature(cpg).endsWith("Lcom/nimbusds/oauth2/sdk/TokenResponse;")
+                        ) || (invokeInstruction.getSignature(cpg).contains("Lcom/nimbusds/jwt/JWT;")
+                         && !invokeInstruction.getSignature(cpg).endsWith("Lcom.nimbusds.jwt.JWT;"));
                  // Google SDK
          boolean idTokenParameterGoogle =  (invokeInstruction.getSignature(cpg).contains("Lcom/google/api/client/auth/openidconnect/IdTokenResponse;") // google
                         && !invokeInstruction.getSignature(cpg).endsWith("Lcom/google/api/client/auth/openidconnect/IdTokenResponse;"))
@@ -424,8 +428,8 @@ public class ImproperTokenValidationDetector implements Detector {
                     // FIXME: we must ensure that this looks for something that may do "verify", either by throwing or returning boolean. FP risk: passing on and continuing verify
                     foundTokenPassedAsParamToPossibleCheck = true;
 
-                    boolean calledMethodIndicatesVerify = invokeInstruction.getMethodName(cpg).contains(TOKEN_VARIABLE_NAME_REGEX_PATTERN)
-                                                            || invokeInstruction.getMethodName(cpg).matches(VERIFY_REGEXPATTERN);
+                    boolean calledMethodIndicatesVerify = Pattern.compile(TOKEN_VARIABLE_NAME_REGEX_PATTERN).matcher(invokeInstruction.getMethodName(cpg)).find()
+                                                            || Pattern.compile(VERIFY_REGEXPATTERN).matcher(invokeInstruction.getMethodName(cpg)).find();
                     savePassedAsParam(cpg, invokeInstruction,
                                            new AnalyzedMethodPeepholes(
                                                    m,
@@ -463,9 +467,15 @@ public class ImproperTokenValidationDetector implements Detector {
                 AnalyzedMethodPeepholes analyzedMethod = methodCallersThatShouldHaveVerify.get(localCalledMethod);
                 if(analyzedMethod.notClearedAndPossiblyPassesCheck) {
                     if(!methodsWithVerify.contains(localCalledMethod)) {
-                        reportInterproceduralMethodCall(javaClass,
-                                localCalledMethod,
-                                analyzedMethod.method);
+                        if(analyzedMethod.calledMethodNameIndicatesVerify) {
+                            reportInterproceduralMethodCallIncomplete(javaClass,
+                                    localCalledMethod,
+                                    analyzedMethod.method);
+                        } else {
+                            reportInterproceduralMethodCall(javaClass,
+                                    localCalledMethod,
+                                    analyzedMethod.method);
+                        }
                     }
                 }
             }
@@ -496,6 +506,15 @@ public class ImproperTokenValidationDetector implements Detector {
                 }
             }
         }
+    }
+
+    private void reportInterproceduralMethodCallIncomplete(JavaClass javaClass,
+                                                 Method locallyCalledMethod,
+                                                 Method callerMethod) {
+        bugReporter.reportBug(new BugInstance(this, INCOMPLETE_ID_TOKEN_VERIFICATION, Priorities.HIGH_PRIORITY)
+                .addClassAndMethod(javaClass, callerMethod));
+        //bugReporter.reportBug(new BugInstance(this, MISSING_VERIFY_ID_TOKEN, Priorities.HIGH_PRIORITY)
+          //      .addClassAndMethod(javaClass, locallyCalledMethod));
     }
 
     private void reportInterproceduralMethodCall(JavaClass javaClass,
