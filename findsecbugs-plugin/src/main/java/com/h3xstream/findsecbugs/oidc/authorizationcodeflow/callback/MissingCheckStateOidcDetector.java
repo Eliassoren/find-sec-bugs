@@ -46,8 +46,8 @@ public class MissingCheckStateOidcDetector implements Detector {
     private static final InvokeMatcherBuilder
             AUTH_RESPONSE_PARSE = invokeInstruction()
             .atClass("com/nimbusds/openid/connect/sdk/AuthenticationResponseParser")
-            .atMethod("parse")
-            .withArgs("(Ljava/net/URI;)Lcom/nimbusds/openid/connect/sdk/AuthenticationResponse;");
+            .atMethod("parse");
+            //.withArgs("(Ljava/net/URI;)Lcom/nimbusds/openid/connect/sdk/AuthenticationResponse;");
 
     private static final InvokeMatcherBuilder
             AUTH_RESPONSE_PARSE_GOOGLE = invokeInstruction()
@@ -273,7 +273,7 @@ public class MissingCheckStateOidcDetector implements Detector {
     private void reportInterproceduralMethodCall(JavaClass javaClass,
                                                  MethodAnnotation lookupCalledMethod,
                                                  Method callerMethod) {
-        bugReporter.reportBug(new BugInstance(this, EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE, Priorities.LOW_PRIORITY)
+        bugReporter.reportBug(new BugInstance(this, EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
                 .addClassAndMethod(javaClass, callerMethod)
                 .addCalledMethod(lookupCalledMethod.toXMethod()));
     }
@@ -282,7 +282,7 @@ public class MissingCheckStateOidcDetector implements Detector {
     private void reportInterproceduralMethodCall(JavaClass javaClass,
                                                  CalledMethodIdentifiers lookupCalledMethodIdentifiers,
                                                  Method callerMethod) {
-        bugReporter.reportBug(new BugInstance(this, EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE, Priorities.LOW_PRIORITY)
+        bugReporter.reportBug(new BugInstance(this, EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE, Priorities.NORMAL_PRIORITY)
                 .addClassAndMethod(javaClass, callerMethod)
                 .addString(lookupCalledMethodIdentifiers.toString()));
 

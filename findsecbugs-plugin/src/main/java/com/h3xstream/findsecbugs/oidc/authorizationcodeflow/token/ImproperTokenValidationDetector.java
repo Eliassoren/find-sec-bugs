@@ -442,7 +442,7 @@ public class ImproperTokenValidationDetector implements Detector {
                 }
             }
 
-            if (foundTokenRequest && !foundTokenVerifyCall && !foundTokenPassedAsParamToPossibleCheck) {
+            if ((foundTokenRequest || foundGetIdToken) && !foundTokenVerifyCall && !foundTokenPassedAsParamToPossibleCheck) {
                 bugReporter.reportBug(new BugInstance(this, MISSING_VERIFY_ID_TOKEN, Priorities.HIGH_PRIORITY)
                         .addClassAndMethod(javaClass, m));
             }
@@ -529,7 +529,7 @@ public class ImproperTokenValidationDetector implements Detector {
     private void reportInterproceduralMethodCall(JavaClass javaClass,
                                                  MethodAnnotation lookupCalledMethod,
                                                  Method callerMethod) {
-        bugReporter.reportBug(new BugInstance(this, EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN, Priorities.LOW_PRIORITY)
+        bugReporter.reportBug(new BugInstance(this, EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN, Priorities.NORMAL_PRIORITY)
                 .addClassAndMethod(javaClass, callerMethod)
                 .addCalledMethod(lookupCalledMethod.toXMethod()));
     }
@@ -538,7 +538,7 @@ public class ImproperTokenValidationDetector implements Detector {
     private void reportInterproceduralMethodCall(JavaClass javaClass,
                                                  CalledMethodIdentifiers lookupCalledMethodIdentifiers,
                                                  Method callerMethod) {
-        bugReporter.reportBug(new BugInstance(this, EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN, Priorities.LOW_PRIORITY)
+        bugReporter.reportBug(new BugInstance(this, EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_ID_TOKEN, Priorities.NORMAL_PRIORITY)
                 .addClassAndMethod(javaClass, callerMethod)
                 .addString(lookupCalledMethodIdentifiers.toString()));
 
