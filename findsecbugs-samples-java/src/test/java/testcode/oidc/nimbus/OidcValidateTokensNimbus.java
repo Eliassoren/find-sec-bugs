@@ -73,7 +73,7 @@ public class OidcValidateTokensNimbus {
 
     }
 
-    private void validateToken(JWT idToken) {
+    public void validateToken(JWT idToken) {
         String.valueOf(1);
         // do nothing
     }
@@ -151,6 +151,61 @@ public class OidcValidateTokensNimbus {
        // }
     }
 
+    // STEP 3 in flow chart
+    public Response OK_tokenRequestValidateIdTokenCallToOther(OidcConfig oidcConfig, AuthorizationCode authorizationCode) {
+        // Make the token request
+        ClientID clientID = new ClientID(config.getProperty("client_id"));
+        Secret clientSecret = new Secret(config.getProperty("client_secret"));
+        TokenRequest tokenRequest = new TokenRequest(providerMetadata.getTokenEndpointURI(),
+                new ClientSecretBasic(clientID, clientSecret),
+                new AuthorizationCodeGrant(authorizationCode, callback));
+        TokenResponse tokenResponse;
+        try {
+            tokenResponse = OIDCTokenResponseParser.parse(tokenRequest.toHTTPRequest().send());
+            if (!tokenResponse.indicatesSuccess()) {  // TODO: trigger for error handling and break control flow
+                // We got an error response...
+                ErrorObject errorObject = Objects.requireNonNull(tokenResponse).toErrorResponse().getErrorObject();
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Token request failed with code: "+errorObject.getCode())
+                        .build();
+            }
+        } catch (IOException | com.nimbusds.oauth2.sdk.ParseException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Parsing of token response failed.").build();
+        }
+        return OK_validateToken(oidcConfig, tokenResponse);
+        //catch (Exception e) {
+        //  return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Something went wrong during token validation").build();
+        // }
+    }
+
+    // STEP 3 in flow chart
+    public Response OK_tokenRequestValidateIdTokenCallToOtherVoid(OidcConfig oidcConfig, AuthorizationCode authorizationCode) {
+        // Make the token request
+        ClientID clientID = new ClientID(config.getProperty("client_id"));
+        Secret clientSecret = new Secret(config.getProperty("client_secret"));
+        TokenRequest tokenRequest = new TokenRequest(providerMetadata.getTokenEndpointURI(),
+                new ClientSecretBasic(clientID, clientSecret),
+                new AuthorizationCodeGrant(authorizationCode, callback));
+        TokenResponse tokenResponse;
+        try {
+            tokenResponse = OIDCTokenResponseParser.parse(tokenRequest.toHTTPRequest().send());
+            if (!tokenResponse.indicatesSuccess()) {  // TODO: trigger for error handling and break control flow
+                // We got an error response...
+                ErrorObject errorObject = Objects.requireNonNull(tokenResponse).toErrorResponse().getErrorObject();
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("Token request failed with code: "+errorObject.getCode())
+                        .build();
+            }
+        } catch (IOException | com.nimbusds.oauth2.sdk.ParseException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Parsing of token response failed.").build();
+        }
+        OK_validateTokenVoid(oidcConfig, tokenResponse);
+        return Response.ok().build();
+        //catch (Exception e) {
+        //  return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Something went wrong during token validation").build();
+        // }
+    }
+
     private Response.ResponseBuilder validateAccessToken(JWT idToken, AccessToken accessToken) {
         try {
             JWSAlgorithm idTokenJwsAlgorithm =  (JWSAlgorithm)idToken.getHeader().getAlgorithm();
@@ -166,6 +221,62 @@ public class OidcValidateTokensNimbus {
             return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid access token");
         }
         return Response.ok();
+    }
+
+    public void OK_validateTokenVoid(OidcConfig config, TokenResponse tokenResponse) {
+        // Validate ID token - required!
+        JWSAlgorithm metadataAlg = providerMetadata.getIDTokenJWSAlgs().contains(JWSAlgorithm.RS256)?
+                JWSAlgorithm.RS256 // Recommended in OIDC specification.
+                : JWSAlgorithm.HS256; // Stated as required in SDK. Could assume it exists.
+        try {
+            idTokenValidator = new IDTokenValidator(providerMetadata.getIssuer(),
+                    clientID,
+                    metadataAlg,
+                    providerMetadata.getJWKSetURI().toURL()); // JWKsetUri contains the keys from the IdP
+        }  catch (MalformedURLException e) {
+           throw new SecurityException("The provider metadata jwkSetUri is invalid");
+        }
+        OIDCTokenResponse successTokenResponse = (OIDCTokenResponse)tokenResponse.toSuccessResponse();
+        Nonce savedNonce = config.nonce;
+        JWT idToken = successTokenResponse.getOIDCTokens().getIDToken();
+        try {
+            idTokenValidator.validate(idToken, savedNonce);
+        } catch (BadJOSEException e) {
+            // Error handling and break flow
+            throw new SecurityException("Invalid ID token");
+        } catch (JOSEException e) {
+            throw new SecurityException("Error while validating ID token.");
+        }
+    }
+
+    public Response OK_validateToken(OidcConfig config, TokenResponse tokenResponse) {
+        // Validate ID token - required!
+        JWSAlgorithm metadataAlg = providerMetadata.getIDTokenJWSAlgs().contains(JWSAlgorithm.RS256)?
+                JWSAlgorithm.RS256 // Recommended in OIDC specification.
+                : JWSAlgorithm.HS256; // Stated as required in SDK. Could assume it exists.
+        try {
+            idTokenValidator = new IDTokenValidator(providerMetadata.getIssuer(),
+                    clientID,
+                    metadataAlg,
+                    providerMetadata.getJWKSetURI().toURL()); // JWKsetUri contains the keys from the IdP
+        }  catch (MalformedURLException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("The provider metadata jwkSetUri is invalid").build();
+        }
+        OIDCTokenResponse successTokenResponse = (OIDCTokenResponse)tokenResponse.toSuccessResponse();
+        Nonce savedNonce = config.nonce;
+        JWT idToken = successTokenResponse.getOIDCTokens().getIDToken();
+        try {
+            idTokenValidator.validate(idToken, savedNonce);
+        } catch (BadJOSEException e) {
+            // Error handling and break flow
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Invalid ID token").build();
+        } catch (JOSEException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Error while validating ID token.").build();
+        }
+        // Todo: valid to store tokens in DB
+        return Response
+                .ok(successTokenResponse.toJSONObject()) // Contains ID Token, access token, optionally refresh token...
+                .build();
     }
 
     public void validateToken(String idTokenString, Nonce expectedNonce) {

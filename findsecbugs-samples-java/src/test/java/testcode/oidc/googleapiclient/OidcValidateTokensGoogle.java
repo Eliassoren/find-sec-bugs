@@ -121,6 +121,7 @@ public class OidcValidateTokensGoogle {
             IdTokenVerifier idTokenVerifier = new IdTokenVerifier.Builder()
                                                 .setAudience(Collections.singleton(authorizationCodeFlow.getClientId()))
                                                 .setIssuer(String.valueOf(providerMetadata.get("iss")))
+
                                                 .build(); // missing time
 
            // IdToken.parse(new Json(),  idTokenResponse.getIdToken());

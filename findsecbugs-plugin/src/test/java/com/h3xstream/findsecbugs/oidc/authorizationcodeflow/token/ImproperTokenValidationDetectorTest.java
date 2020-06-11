@@ -31,7 +31,8 @@ public class ImproperTokenValidationDetectorTest extends BaseDetectorTest {
     public void forgotToCheckTokenTestGoogleApiClient() throws Exception {
         //Locate test code
         String[] files = {
-               getClassFilePath("testcode/oidc/googleapiclient/OidcValidateTokensGoogle")
+             getClassFilePath("testcode/oidc/googleapiclient/OidcValidateTokensGoogle")
+               // getClassFilePath("testcode/oidc/googleapiclient/OIDCUtils")
         };
 
         //Run the analysis
@@ -40,25 +41,47 @@ public class ImproperTokenValidationDetectorTest extends BaseDetectorTest {
 
 
         //Assertions
-        verify(reporter).doReportBug(
+  /*      verify(reporter).doReportBug(
                 bugDefinition()
                         .bugType("MISSING_VERIFY_ID_TOKEN")
                         .inClass("OidcValidateTokensGoogle")
                         .inMethod("tokenRequestNoValidation")
                         .build()
-        );
+        );*/
     }
 
     @Test
     public void forgotToCheckTokenTestNimbusSDK() throws Exception {
         //Locate test code
         String[] files = {
-                getClassFilePath("testcode/oidc/nimbus/OidcValidateTokensNimbus")
+                getClassFilePath("testcode/oidc/nimbus/OidcValidateTokensNimbus"),
+              //  getClassFilePath("testcode/oidc/gitignore/evaluation/Liferay")
         };
 
         //Run the analysis
         EasyBugReporter reporter = spy(new BaseDetectorTest.SecurityReporter());
         analyze(files, reporter);
+
+        //Assertions
+        verify(reporter).doReportBug(
+                bugDefinition()
+                        .bugType("MISSING_VERIFY_ID_TOKEN")
+                        .inClass("OidcValidateTokensNimbus")
+                        .inMethod("tokenRequestForgetValidateIdToken")
+                        .build()
+        );
+
+        verify(reporter).doReportBug(
+                bugDefinition()
+                        .bugType("INCOMPLETE_ID_TOKEN_VERIFICATION")
+                        .inClass("OidcValidateTokensNimbus")
+                        .inMethod("tokenRequestForgetValidateIdTokenCallToOther")
+                        .build()
+        );
+
+
+
+
 
     }
 }
