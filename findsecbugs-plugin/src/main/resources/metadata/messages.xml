@@ -1149,7 +1149,10 @@ contains no unauthorized path characters (e.g., / \), and refers to an authorize
 
     <!-- ReDOS -->
     <Detector class="com.h3xstream.findsecbugs.ReDosDetector">
-        <Details>The regular expression can grow exponentially with some input.</Details>
+        <Details>Detect regular expression can grow exponentially with some input.</Details>
+    </Detector>
+    <Detector class="com.h3xstream.findsecbugs.RedosAnnotationDetector">
+        <Details>Detect regular expression can grow exponentially with some input in Pattern annotation.</Details>
     </Detector>
 
     <BugPattern type="REDOS">
@@ -1712,13 +1715,13 @@ transformer.transform(input, result);</pre>
 The following snippets show two available solutions. You can set one feature or both.
 </p>
 
-<p><b>Solution using "Secure processing" mode:</b></p>
+<p><b>Solution disabling DTD:</b></p>
 <p>
 This setting will protect you against remote file access but not denial of service.
 <pre>
 TransformerFactory factory = TransformerFactory.newInstance();
-factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "all");
-factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "all");
+factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
 
 Transformer transformer = factory.newTransformer();
 transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -1726,7 +1729,9 @@ transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 transformer.transform(input, result);</pre>
 </p>
 
-<p><b>Solution disabling DTD:</b></p>
+<p>An empty string denies all access to external references for both attributes.</p>
+
+<p><b>Solution using "Secure processing" mode:</b></p>
 <p>
 This setting will protect you against remote file access but not denial of service.
 <pre>
@@ -1791,13 +1796,13 @@ transformer.transform(input, result);</pre>
 <p>
 The following snippets show two available solutions. You can set one feature or both.
 </p>
-<p><b>Solution using "Secure processing" mode:</b></p>
+<p><b>Solution disabling DTD:</b></p>
 <p>
 This setting will protect you against remote file access but not denial of service.
 <pre>
 TransformerFactory factory = TransformerFactory.newInstance();
-factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "all");
-factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "all");
+factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
 
 Transformer transformer = factory.newTransformer();
 transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -1805,7 +1810,9 @@ transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 transformer.transform(input, result);</pre>
 </p>
 
-<p><b>Solution disabling DTD:</b></p>
+<p>An empty string denies all access to external references for both attributes.</p>
+
+<p><b>Solution using "Secure processing" mode:</b></p>
 <p>
 This setting will protect you against remote file access but not denial of service.
 <pre>
@@ -2350,11 +2357,24 @@ Bind variables in prepared statements can be used to easily mitigate the risk of
     <pre>JdbcTemplate jdbc = new JdbcTemplate();
 int count = jdbc.queryForObject("select count(*) from Users where name = '"+paramName+"'", Integer.class);
 </pre>
+    <pre>@Value("properties")
+private String sql;
+
+public function count() {
+    JdcbOperation jdbc = new JdcbOperation();
+    int count = jdbc.query(sql);
+}</pre>
 </p>
 <p>
     <b>Solution:</b><br/>
     <pre>JdbcTemplate jdbc = new JdbcTemplate();
 int count = jdbc.queryForObject("select count(*) from Users where name = ?", Integer.class, paramName);</pre>
+    <pre>private final static String sql = "select count(*) from Users";
+
+public function count() {
+    JdcbOperation jdbc = new JdcbOperation();
+    int count = jdbc.query(sql);
+}</pre>
 </p>
 <br/>
 
@@ -2494,6 +2514,50 @@ DB.withConnection { implicit c =>
     </BugPattern>
     <BugCode abbrev="SECSSQLA">SQL Injection (Scala - Anorm)</BugCode>
 
+    <!-- SQL Injection Vertx -->
+    <BugPattern type="SQL_INJECTION_VERTX">
+        <ShortDescription>Potential SQL Injection with Vert.x Sql Client</ShortDescription>
+        <LongDescription>This use of {3} can be vulnerable to SQL injection (with Vert.x Sql Client)</LongDescription>
+        <Details>
+            <![CDATA[
+<p>
+The input values included in SQL queries need to be passed in safely.
+Bind variables in prepared statements can be used to easily mitigate the risk of SQL injection.
+Vert.x Sql Client API provide a DSL to build query with Java code.
+</p>
+<p>
+    <b>Vulnerable Code:</b><br/>
+    <pre>
+SqlClient.query( "select * from Customer where id=" + inputId ).execute(ar -> ...);
+</pre>
+</p>
+<p>
+    <b>Solution (using Prepared Statements):</b><br/>
+
+    <pre>
+client
+    .preparedQuery( "SELECT * FROM users WHERE id=$1" )
+    .execute(Tuple.of("julien"))
+    .onSuccess(rows -> ...)
+    .onFailure(err -> ...);
+</pre>
+</p>
+<br/>
+<p>
+<b>References (Vert.x Sql Client)</b><br/>
+<a href="https://vertx.io/docs/#databases">Vertx Database Access Documentation</a><br/>
+<b>References (SQL injection)</b><br/>
+<a href="http://projects.webappsec.org/w/page/13246963/SQL%20Injection">WASC-19: SQL Injection</a><br/>
+<a href="https://capec.mitre.org/data/definitions/66.html">CAPEC-66: SQL Injection</a><br/>
+<a href="https://cwe.mitre.org/data/definitions/89.html">CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')</a><br/>
+<a href="https://www.owasp.org/index.php/Top_10_2013-A1-Injection">OWASP: Top 10 2013-A1-Injection</a><br/>
+<a href="https://www.owasp.org/index.php/SQL_Injection_Prevention_Cheat_Sheet">OWASP: SQL Injection Prevention Cheat Sheet</a><br/>
+<a href="https://www.owasp.org/index.php/Query_Parameterization_Cheat_Sheet">OWASP: Query Parameterization Cheat Sheet</a><br/>
+</p>
+]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECSQLIVX">SQL Injection with Vert.x Client</BugCode>
 
     <!-- Android SQL Injection -->
     <Detector class="com.h3xstream.findsecbugs.injection.sql.AndroidSqlInjectionDetector">
@@ -2558,17 +2622,25 @@ Just like SQL, all inputs passed to an LDAP query need to be passed in safely. U
 Therefore, the primary defense against LDAP injection is strong input validation of any untrusted data before including it in an LDAP query.
 </p>
 <p>
-    <b>Code at risk:</b><br/>
+    <strong>Code at risk:</strong><br/>
     <pre>NamingEnumeration&lt;SearchResult&gt; answers = context.search("dc=People,dc=example,dc=com",
         "(uid=" + username + ")", ctrls);</pre>
 </p>
 <br/>
+<p><strong>Solution:</strong></p>
 <p>
-<b>References</b><br/>
+Safe evaluation of Java code using "StringUtils" library.<br/>
+<pre>if(StringUtils.isAlphanumeric(username)) {
+    NamingEnumeration&lt;SearchResult&gt; answers = context.search("dc=People,dc=example,dc=com",
+        "(uid=" + username + ")", ctrls);
+}</pre>
+</p>
+<br/><p>
+<strong>References</strong><br/>
+<a href="https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html">LDAP Injection Prevention Cheat Sheet</a><br/>
+<a href="https://owasp.org/www-project-top-ten/OWASP_Top_Ten_2017/Top_10-2017_A1-Injection">OWASP: Top 10 A1:2017-Injection</a><br/>
 <a href="http://projects.webappsec.org/w/page/13246947/LDAP%20Injection">WASC-29: LDAP Injection</a><br/>
-<a href="https://www.owasp.org/index.php/Top_10_2013-A1-Injection">OWASP: Top 10 2013-A1-Injection</a><br/>
 <a href="https://cwe.mitre.org/data/definitions/90.html">CWE-90: Improper Neutralization of Special Elements used in an LDAP Query ('LDAP Injection')</a><br/>
-<a href="https://www.veracode.com/security/ldap-injection">LDAP Injection Guide: Learn How to Detect LDAP Injections and Improve LDAP Security</a>
 </p>
 ]]>
         </Details>
@@ -2587,7 +2659,7 @@ Therefore, the primary defense against LDAP injection is strong input validation
         <Details>
             <![CDATA[
 <p>
-    Dynamic code is being evaluate. A careful analysis of the code construction should be made. Malicious code execution
+    Dynamic code is being evaluated. A careful analysis of the code construction should be made. Malicious code execution
     could lead to data leakage or operating system compromised.
 </p>
 <p>
@@ -2789,7 +2861,7 @@ public void getUserProperty(String property) {
 </p>
 <p><b>Solution:</b></p>
 <p>
-In general, method evaluating OGNL expression should not receive user input. It is intended to be used in static configurations and JSP.
+In general, method evaluating OGNL expression should not receive user input. It is intended to be used in static configurations.
 </p>
 <br/>
 <p>
@@ -2804,6 +2876,45 @@ In general, method evaluating OGNL expression should not receive user input. It 
     </BugPattern>
     <BugCode abbrev="SECOGNL">OGNL expression injection</BugCode>
 
+    <!-- Groovy Shell injection -->
+    <Detector class="com.h3xstream.findsecbugs.groovy.GroovyShellDetector">
+        <Details>Identify GroovyShell injection</Details>
+    </Detector>
+
+    <BugPattern type="GROOVY_SHELL">
+        <ShortDescription>Potential code injection when using GroovyShell</ShortDescription>
+        <LongDescription>Potential code injection when using GroovyShell</LongDescription>
+        <Details>
+            <![CDATA[
+<p>
+    A expression is built with a dynamic value. The source of the value(s) should be verified to avoid
+    that unfiltered values fall into this risky code evaluation.
+</p>
+<p><b>Code at risk:</b></p>
+<p>
+<pre>
+public void evaluateScript(String script) {
+  GroovyShell shell = new GroovyShell();
+  shell.evaluate(script);
+}
+</pre>
+</p>
+<p><b>Solution:</b></p>
+<p>
+In general, method evaluating Groovy expression should not receive user input from low privilege users.
+</p>
+<br/>
+<p>
+    <b>References</b><br/>
+    <a href="https://blog.orange.tw/2019/02/abusing-meta-programming-for-unauthenticated-rce.html">Hacking Jenkins Part 2 - Abusing Meta Programming for Unauthenticated RCE!</a> by Orange Tsai<br/>
+    <a href="https://github.com/orangetw/awesome-jenkins-rce-2019">Jenkins RCE payloads</a> by Orange Tsai<br/>
+    <a href="https://github.com/adamyordan/cve-2019-1003000-jenkins-rce-poc">POC for CVE-2019-1003001</a> by Adam Jordan<br/>
+    <a href="https://github.com/welk1n/exploiting-groovy-in-Java/">Various payloads of exploiting Groovy code evaluation</a><br/>
+</p>
+]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECGROSH">GroovyShell expression injection</BugCode>
 
     <!-- HTTP Response Splitting -->
     <Detector class="com.h3xstream.findsecbugs.HttpResponseSplittingDetector">
@@ -3256,6 +3367,10 @@ The code should be replaced with:<br/>
 
     <Detector class="com.h3xstream.findsecbugs.password.HardcodedPasswordEqualsDetector">
         <Details>Identify hardcoded credentials when variable named password are compared to a constant value.</Details>
+    </Detector>
+
+    <Detector class="com.h3xstream.findsecbugs.password.JschPasswordDetector">
+        <Details>Identify hardcoded credentials with Jsch API.</Details>
     </Detector>
 
     <BugPattern type="HARD_CODE_PASSWORD">
@@ -5383,7 +5498,7 @@ which explains these defenses in significant detail.
             <![CDATA[
 <p>
 Velocity template engine is powerful. It is possible to add logic including condition statements, loops and external calls.
-It is not design to be sandbox to templating operations. A malicious user in control of a template can run malicious code
+It is not designed to be a sandbox to templating operations. A malicious user in control of a template can run malicious code
 on the server-side. Velocity templates should be seen as scripts.
 </p>
 <p>
@@ -5987,13 +6102,22 @@ In the following example the programmer has not considered the possibility that 
 </p>
 <p>
     <b>Vulnerable Code:</b><br/>
-<pre>String lang = request.getParameter("lang");
-GetMethod get = new GetMethod("http://www.host.com");
-get.setQueryString("lang=" + lang + "&user_id=" + user_id);
+<pre>String input = request.getParameter("lang");
+GetMethod get = new GetMethod("http://www.host.com/viewDetails");
+get.setQueryString("lang=" + input + "&user_id=" + userId);
 get.execute();</pre>
 <p>
     <b>Solution:</b><br/>
-Sanitize user input before using it in HTTP parameters.
+You can either encode user input before placing it in HTTP parameters or use the
+<a href="https://hc.apache.org/httpcomponents-client-4.3.x/httpclient/apidocs/org/apache/http/client/utils/URIBuilder.html">UriBuilder class</a>
+from <a href="https://hc.apache.org/httpcomponents-client-ga/">Apache HttpClient</a>.
+<pre>
+URIBuilder uriBuilder = new URIBuilder("http://www.host.com/viewDetails");
+uriBuilder.addParameter("lang", input);
+uriBuilder.addParameter("user_id", userId);
+
+HttpGet httpget = new HttpGet(uriBuilder.build().toString()); //OK
+</pre>
 </p>
 <br/>
 <p>
@@ -6309,6 +6433,198 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECOPFP">Overly permissive file permission</BugCode>
 
+    <!-- Improper handling of Unicode transformation -->
+    <Detector class="com.h3xstream.findsecbugs.ImproperHandlingUnicodeDetector">
+        <Details>Identify improper handling of Unicode transformations (case mapping and normalization).</Details>
+    </Detector>
+    <BugPattern type="IMPROPER_UNICODE">
+        <ShortDescription>Improper handling of Unicode transformations</ShortDescription>
+        <LongDescription>Improper handling of Unicode transformations such as case mapping and normalization.</LongDescription>
+        <Details>
+            <![CDATA[
+<p>
+Unexpected behavior in unicode transformations can sometimes lead to bugs, some of them affecting software security.
+A code that applies the uppercase transformation to two strings could mistakenly interpret both strings as being equal.
+</p>
+
+<p>
+In the code bellow, the string <code>"ADM\u0131N"</code> would cause the condition to be true.
+When the uppercase transformation is applied, the character `\u0131` will becomme '\u0049' (I).
+It can be an issue if the developer only one user to be <code>"ADMIN"</code>.<br/>
+<pre>
+if(username.toUpperCase().equals("ADMIN")) {
+  //...
+}
+</pre>
+</p>
+
+<p>
+Similar characters transformations can occurs with normalization functions.
+In the code bellow, the string <code>"BAC\u212AUP"</code> would cause the condition to be true.
+When the normalization transformation is applied, the character `\u212A` will becomme '\u0048' (K).<br/>
+<pre>
+if(Normalizer.normalize(input, Normalizer.Form.NFC).equals("BACKUP")) {
+  //...
+}
+</pre>
+</p>
+
+<p>
+<b>References</b><br/>
+<a href="https://www.gosecure.net/blog/2020/08/04/unicode-for-security-professionals/">Unicode for Security Professionals</a><br/>
+<a href="http://websec.github.io/unicode-security-guide/character-transformations/">Unicode Security Guide: Character Transformations</a><br/>
+<a href="https://cwe.mitre.org/data/definitions/176.html">CWE-176: Improper Handling of Unicode Encoding</a><br/>
+<a href="http://unicode.org/reports/tr36/">Unicode: Unicode Security Considerations</a><br/>
+</p>
+
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECUNI">Improper handling of Unicode transformations</BugCode>
+
+    <!-- Perform any string modifications before validation -->
+    <Detector class="com.h3xstream.findsecbugs.ModificationAfterValidationDetector">
+        <Details>Identify string modifications after validation and not before it.</Details>
+    </Detector>
+    <BugPattern type="MODIFICATION_AFTER_VALIDATION">
+        <ShortDescription>String is modified after validation and not before it</ShortDescription>
+        <LongDescription>String is modified after validation and not before it. Tricky attackers may pass malicious strings which bypass validation.</LongDescription>
+        <Details>
+            <![CDATA[
+<p>
+A string must not be modified after validation because it may allow an attacker to bypass validation using a tricky
+string which becomes malicious after the modification. For example, a program may filter out the &langle;script&rangle; tags from
+HTML input to avoid cross-site scripting (XSS) and other vulnerabilities. If non-character code points  are deleted
+from the input following validation, an attacker may pass the string "&langle;scr"+"\uFDEF"+"ipt&rangle;" so that the validation
+check fails to detect the &langle;script&rangle; tag, but the subsequent removal of the non-character code pont creates a &langle;script&rangle;
+tag in the input:
+<pre>
+Pattern pattern = Pattern.compile("&lt;script&gt;");
+Matcher matcher = pattern.matcher(s);
+if (matcher.find()) {
+  throw new IllegalArgumentException("Invalid input");
+}
+
+s = s.replaceAll("[\\p{Cn}]", "");
+</pre>
+</p>
+
+<p>
+The proper way is to perform the modification before the validation so the passed string is first changed to &langle;script&rangle;
+which fails to be validated:
+<pre>
+s = s.replaceAll("[\\p{Cn}]", "\uFFFD");
+Pattern pattern = Pattern.compile("&lt;script&gt;");
+Matcher matcher = pattern.matcher(s);
+if (matcher.find()) {
+  throw new IllegalArgumentException("Invalid input");
+}
+</pre>
+</p>
+
+<p>
+<b>References</b><br/>
+<a href="https://wiki.sei.cmu.edu/confluence/display/java/IDS11-J.+Perform+any+string+modifications+before+validation">CERT: IDS11-J. Perform any string modifications before validation</a><br/>
+</p>
+
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECMOD">String if modified after validation and not before it</BugCode>
+
+    <!-- Normalize strings before validating them -->
+    <Detector class="com.h3xstream.findsecbugs.NormalizationAfterValidationDetector">
+        <Details>Identify string normalization after validation and not before it.</Details>
+    </Detector>
+    <BugPattern type="NORMALIZATION_AFTER_VALIDATION">
+        <ShortDescription>String is normalzied after validation and not before it</ShortDescription>
+        <LongDescription>String is normalzied after validation and not before it. Tricky attackers may pass malicious strings which bypass validation.</LongDescription>
+        <Details>
+            <![CDATA[
+<p>
+A string must not be normalized after validation because it may allow an attacker to bypass validation using a tricky
+string which becomes malicious after the normalization. For example, a program may filter out the &langle;script&rangle; tags from
+HTML input to avoid cross-site scripting (XSS) and other vulnerabilities. However, in unicode, the same string can have
+many different representations. For example, \uFE64 is normalized to &langle; and \uFE65 is normalized to &rangle;. Thus the
+if an attacker passes the string "\uFE64" + "script" + "\uFE65" the validation check fails to detect the &langle;script&rangle; tag,
+but thereafter the string is normalized to the &langle;script&rangle; tag in the input:
+<pre>
+Pattern pattern = Pattern.compile("[<>]"); // Check for angle brackets
+Matcher matcher = pattern.matcher(s);
+if (matcher.find()) {
+  throw new IllegalStateException();
+}
+s = Normalizer.normalize(s, Form.NFKC);
+</pre>
+</p>
+
+<p>
+The proper way is to do the normalization before the validation so the passed string is first changed to &langle;script&rangle;
+which fails to be validated:
+<pre>
+s = Normalizer.normalize(s, Form.NFKC);
+Pattern pattern = Pattern.compile("[<>]");
+Matcher matcher = pattern.matcher(s);
+if (matcher.find()) {
+  throw new IllegalStateException();
+}
+</pre>
+</p>
+
+<p>
+<b>References</b><br/>
+<a href="https://wiki.sei.cmu.edu/confluence/display/java/IDS01-J.+Normalize+strings+before+validating+them">CERT: IDS01-J. Normalize strings before validating them</a><br/>
+</p>
+
+            ]]>
+        </Details>
+    </BugPattern>
+    <BugCode abbrev="SECNORM">Normalize strings before validating them</BugCode>
+
+    <Detector class="com.h3xstream.findsecbugs.DangerousPermissionCombination">
+        <Details>Detector for patterns where combination of dangerous permissions are granted.</Details>
+    </Detector>
+    <BugPattern type="DANGEROUS_PERMISSION_COMBINATION">
+        <ShortDescription>Dangerous combination of permissions granted</ShortDescription>
+        <LongDescription>Granting permission {2} on the target {3} in method {1} is dangerous.</LongDescription>
+        <Details>
+            <![CDATA[
+<p>
+Certain combinations of permissions can produce significant capability increases and should not be granted. Granting
+ReflectPermission on the target suppressAccessChecks is dangerous in that information (possibly confidential) and
+methods normally unavailable would be accessible to malicious code. Similarly, the permission
+<code>java.lang.RuntimePermission</code> applied to target createClassLoader grants code the permission to create a
+<code>ClassLoader</code> object.
+This is extremely dangerous, because malicious applications that can instantiate their own class loaders could
+then load their own rogue classes into the system. These newly loaded classes could be placed into any protection
+domain by the class loader, thereby automatically granting the classes the permissions for that domain.
+</p>
+
+
+<p>
+<b>Dangerous permission combinations:</b><br/>
+
+<pre>
+PermissionCollection pc = super.getPermissions(cs);
+pc.add(new ReflectPermission("suppressAccessChecks"));
+</pre>
+<br/>
+
+<pre>
+PermissionCollection pc = super.getPermissions(cs);
+pc.add(new RuntimePermission("createClassLoader"));
+</pre>
+</p>
+
+
+<p>References</b><br>
+<a href="https://wiki.sei.cmu.edu/confluence/display/java/ENV03-J.+Do+not+grant+dangerous+combinations+of+permissions">CERT: ENV03-J. Do not grant dangerous combinations of permissions</a><br/>
+</p>
+            ]]>
+    </Details>
+  </BugPattern>
+  <BugCode abbrev="SECPERM">Dangerous Permission Combination</BugCode>
+
     <Detector class="com.h3xstream.findsecbugs.oidc.InsecureDeleteSecretDetector">
         <Details>Looking for unsafe flows for Oauth usage of secrets and blacklists</Details>
     </Detector>
@@ -6364,18 +6680,14 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
                AuthorizationCode code = new AuthorizationCode("xyz...");
                 URI callback = new URI("https://client.com/callback");
                 AuthorizationGrant codeGrant = new AuthorizationCodeGrant(code, callback);
-
                 // The credentials to authenticate the client at the token endpoint
                 ClientID clientID = new ClientID("123");
                 Secret clientSecret = new Secret("secret");
                 ClientAuthentication clientAuth = new ClientSecretBasic(clientID, clientSecret);
-
                 // The token endpoint
                 URI tokenEndpoint = new URI("https://c2id.com/token");
-
                 // Make the token request
                 TokenRequest request = new TokenRequest(tokenEndpoint, clientAuth, codeGrant);
-
                 TokenResponse response = OIDCTokenResponseParser.parse(request.toHTTPRequest().send());
             </pre>
             ]]>
@@ -6403,7 +6715,7 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
     </BugPattern>
     <BugCode abbrev="SECVMOS">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
 
- <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE">
+    <BugPattern type="EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE">
         <ShortDescription>State verification check may be missing. State is passed as a parameter to some foreign method.</ShortDescription>
         <LongDescription>The state parameter in the Authentication Response must be verified for checking integrity of the IdP
             while handling of authorization code flow response from IdP. </LongDescription>
@@ -6420,7 +6732,5 @@ perms.add(PosixFilePermission.GROUP_EXECUTE);
         </Details>
     </BugPattern>
     <BugCode abbrev="SECVMOSEXT">Possibly forgot to check state during OIDC authentication response and token request flow.</BugCode>
-
-
 
 </MessageCollection>

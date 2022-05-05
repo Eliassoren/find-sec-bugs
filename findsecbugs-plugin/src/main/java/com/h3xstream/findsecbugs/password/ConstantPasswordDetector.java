@@ -26,6 +26,7 @@ import edu.umd.cs.findbugs.bcel.OpcodeStackDetector;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -118,9 +119,15 @@ public class ConstantPasswordDetector extends OpcodeStackDetector {
 
     private static boolean isSuspiciousName(String fullFieldName, JavaClass obj) {
         int classNameLength = obj.getClassName().length();
-        // do not search pattern in class name (signature not important)
-        String fieldName = fullFieldName.substring(classNameLength);
-        return PASSWORD_PATTERN.matcher(fieldName).matches();
+        // do not search pattern in class name (only the field name matter)
+        if(classNameLength <= fullFieldName.length()) {
+            String fieldName = fullFieldName.substring(classNameLength);
+            return PASSWORD_PATTERN.matcher(fieldName).matches();
+        }
+        else { //Fallback to cover https://github.com/find-sec-bugs/find-sec-bugs/issues/651
+            String fieldName = fullFieldName.substring(Math.max(fullFieldName.lastIndexOf('.'),0));
+            return PASSWORD_PATTERN.matcher(fieldName).matches();
+        }
     }
 
     @Override
@@ -383,6 +390,6 @@ public class ConstantPasswordDetector extends OpcodeStackDetector {
         String path = CONFIG_DIR + "/" + filename;
         return new BufferedReader(new InputStreamReader(
                 getClass().getClassLoader().getResourceAsStream(path)
-        ));
+        , Charset.forName("UTF-8")));
     }
 }

@@ -3,7 +3,7 @@
     <parent>
         <artifactId>findsecbugs-root-pom</artifactId>
         <groupId>com.h3xstream.findsecbugs</groupId>
-        <version>1.11.0-SNAPSHOT</version>
+        <version>1.13.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -11,6 +11,9 @@
 
     <name>Find Security Bugs Samples JSP</name>
 
+    <properties>
+        <spotbugs.skip>true</spotbugs.skip>
+    </properties>
 
     <dependencies>
 
