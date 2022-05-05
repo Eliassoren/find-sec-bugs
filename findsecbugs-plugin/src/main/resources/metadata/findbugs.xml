@@ -33,6 +33,7 @@
     <Detector class="com.h3xstream.findsecbugs.crypto.CustomMessageDigestDetector" reports="CUSTOM_MESSAGE_DIGEST"/>
     <Detector class="com.h3xstream.findsecbugs.file.FileUploadFilenameDetector" reports="FILE_UPLOAD_FILENAME"/>
     <Detector class="com.h3xstream.findsecbugs.ReDosDetector" reports="REDOS"/>
+    <Detector class="com.h3xstream.findsecbugs.RedosAnnotationDetector" reports="REDOS"/>
     <Detector class="com.h3xstream.findsecbugs.xml.XxeDetector" reports="XXE_SAXPARSER,XXE_XMLREADER,XXE_DOCUMENT,XXE_XPATH"/>
     <Detector class="com.h3xstream.findsecbugs.xml.TransformerFactoryDetector" reports="XXE_DTD_TRANSFORM_FACTORY,XXE_XSLT_TRANSFORM_FACTORY"/>
     <Detector class="com.h3xstream.findsecbugs.xml.XmlStreamReaderDetector" reports="XXE_XMLSTREAMREADER"/>
@@ -44,7 +45,7 @@
     <Detector class="com.h3xstream.findsecbugs.csrf.SpringCsrfUnrestrictedRequestMappingDetector" reports="SPRING_CSRF_UNRESTRICTED_REQUEST_MAPPING"/>
     <Detector class="com.h3xstream.findsecbugs.injection.custom.CustomInjectionDetector" reports="CUSTOM_INJECTION"/>
     <Detector class="com.h3xstream.findsecbugs.injection.sql.SqlInjectionDetector"
-              reports="SQL_INJECTION,SQL_INJECTION_TURBINE,SQL_INJECTION_HIBERNATE,SQL_INJECTION_JDO,SQL_INJECTION_JPA,SQL_INJECTION_JDBC,SQL_INJECTION_SPRING_JDBC,SCALA_SQL_INJECTION_SLICK,SCALA_SQL_INJECTION_ANORM"/>
+              reports="SQL_INJECTION,SQL_INJECTION_VERTX,SQL_INJECTION_TURBINE,SQL_INJECTION_HIBERNATE,SQL_INJECTION_JDO,SQL_INJECTION_JPA,SQL_INJECTION_JDBC,SQL_INJECTION_SPRING_JDBC,SCALA_SQL_INJECTION_SLICK,SCALA_SQL_INJECTION_ANORM"/>
     <Detector class="com.h3xstream.findsecbugs.injection.sql.AndroidSqlInjectionDetector" reports="SQL_INJECTION_ANDROID"/>
     <Detector class="com.h3xstream.findsecbugs.crypto.BadHexadecimalConversionDetector" reports="BAD_HEXA_CONVERSION"/>
     <Detector class="com.h3xstream.findsecbugs.crypto.HazelcastSymmetricEncryptionDetector"
@@ -83,6 +84,7 @@
     <Detector class="com.h3xstream.findsecbugs.injection.script.OgnlInjectionDetector"
               reports="OGNL_INJECTION"/>
     <Detector class="com.h3xstream.findsecbugs.injection.script.SpelViewDetector" reports="SPEL_INJECTION"/>
+    <Detector class="com.h3xstream.findsecbugs.groovy.GroovyShellDetector" reports="GROOVY_SHELL"/>
     <Detector class="com.h3xstream.findsecbugs.HttpResponseSplittingDetector" reports="HTTP_RESPONSE_SPLITTING"/>
     <Detector class="com.h3xstream.findsecbugs.injection.crlf.CrlfLogInjectionDetector" reports="CRLF_INJECTION_LOGS"/>
     <Detector class="com.h3xstream.findsecbugs.ExternalConfigurationControlDetector" reports="EXTERNAL_CONFIG_CONTROL"/>
@@ -131,11 +133,16 @@
     <Detector class="com.h3xstream.findsecbugs.wicket.WicketXssComponentDetector" reports="WICKET_XSS1"/>
     <Detector class="com.h3xstream.findsecbugs.file.OverlyPermissiveFilePermissionDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
     <Detector class="com.h3xstream.findsecbugs.file.SuspiciousCommandDetector" reports="OVERLY_PERMISSIVE_FILE_PERMISSION"/>
+    <Detector class="com.h3xstream.findsecbugs.password.JschPasswordDetector" reports="HARD_CODE_PASSWORD"/>
+    <Detector class="com.h3xstream.findsecbugs.ImproperHandlingUnicodeDetector" reports="IMPROPER_UNICODE"/>
+    <Detector class="com.h3xstream.findsecbugs.ModificationAfterValidationDetector" reports="MODIFICATION_AFTER_VALIDATION"/>
+    <Detector class="com.h3xstream.findsecbugs.NormalizationAfterValidationDetector" reports="NORMALIZATION_AFTER_VALIDATION"/>
+    <Detector class="com.h3xstream.findsecbugs.DangerousPermissionCombination" reports="DANGEROUS_PERMISSION_COMBINATION"/>
     <Detector class="com.h3xstream.findsecbugs.oidc.InsecureDeleteSecretDetector"
-              reports="UNSAFE_DELETE_SECRET_AUTH,UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH"/>
+      reports="UNSAFE_DELETE_SECRET_AUTH,UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH"/>
     <Detector class="com.h3xstream.findsecbugs.oidc.badpractice.InsecureAuthorizationGrantDetector" reports="USING_PASSWORD_GRANT_OAUTH"/>
     <Detector class="com.h3xstream.findsecbugs.oidc.state.MissingCheckStateOidcDetector"
-              reports="MISSING_VERIFY_OIDC_STATE,EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE"/>
+      reports="MISSING_VERIFY_OIDC_STATE,EXTERNAL_CALL_POSSIBLY_MISSING_VERIFY_OIDC_STATE"/>
 
     <BugPattern type="HTTP_PARAMETER_POLLUTION" abbrev="SECHPP" category="SECURITY"/>
     <BugPattern type="SMTP_HEADER_INJECTION" abbrev="SECSMTP" category="SECURITY"/>
@@ -147,7 +154,7 @@
     <BugPattern type="AWS_QUERY_INJECTION" abbrev="SECAQI" category="SECURITY"/>
     <BugPattern type="INSECURE_SMTP_SSL" abbrev="SECISC" category="SECURITY"/>
     <BugPattern type="URL_REWRITING" abbrev="SECURLR" category="SECURITY"/>
-    <BugPattern type="COOKIE_PERSISTENT" abbrev="SECCP" category="SECURITY"/>
+    <BugPattern type="COOKIE_PERSISTENT" abbrev="SECCP" category="SECURITY" cweid="539"/>
     <BugPattern type="PERMISSIVE_CORS" abbrev="SECCORS" category="SECURITY"/>
     <BugPattern type="PREDICTABLE_RANDOM" abbrev="SECPR" category="SECURITY" cweid="330"/>
     <BugPattern type="PREDICTABLE_RANDOM_SCALA" abbrev="SECPRS" category="SECURITY" cweid="330"/>
@@ -161,7 +168,7 @@
     <BugPattern type="SERVLET_HEADER_USER_AGENT" abbrev="SECSHUA" category="SECURITY"/>
     <BugPattern type="COOKIE_USAGE" abbrev="SECCU" category="SECURITY"/>
     <BugPattern type="INSECURE_COOKIE" abbrev="SECIC" category="SECURITY" cweid="614"/>
-    <BugPattern type="HTTPONLY_COOKIE" abbrev="SECHOC" category="SECURITY"/>
+    <BugPattern type="HTTPONLY_COOKIE" abbrev="SECHOC" category="SECURITY" cweid="1004"/>
     <BugPattern type="PATH_TRAVERSAL_IN" abbrev="SECPTI" category="SECURITY" cweid="22"/>
     <BugPattern type="PATH_TRAVERSAL_OUT" abbrev="SECPTO" category="SECURITY" cweid="22"/>
     <BugPattern type="SCALA_PATH_TRAVERSAL_IN" abbrev="SSECPTI" category="SECURITY" cweid="22"/>
@@ -197,6 +204,7 @@
     <BugPattern type="SAML_IGNORE_COMMENTS" abbrev="SECSAMLC" category="SECURITY"/>
     <BugPattern type="CUSTOM_INJECTION" abbrev="SECCUSTOMI" category="SECURITY" cweid="74"/>
     <BugPattern type="SQL_INJECTION" abbrev="SECSQLIHIB" category="SECURITY" cweid="564"/>
+    <BugPattern type="SQL_INJECTION_VERTX" abbrev="SECSQLIVX" category="SECURITY" cweid="564"/>
     <BugPattern type="SQL_INJECTION_TURBINE" abbrev="SECSQLITU" category="SECURITY" cweid="564"/>
     <BugPattern type="SQL_INJECTION_HIBERNATE" abbrev="SECSQLIHIB" category="SECURITY" cweid="564"/>
     <BugPattern type="SQL_INJECTION_JDO" abbrev="SECSQLIJDO" category="SECURITY" cweid="89"/>
@@ -236,7 +244,7 @@
     <BugPattern type="JSP_XSLT" abbrev="SECJSPXSLT" category="SECURITY" cweid="94"/>
     <BugPattern type="MALICIOUS_XSLT" abbrev="SECXSLT" category="SECURITY" cweid="94"/>
     <BugPattern type="XSS_SERVLET" abbrev="SECXSS2" category="SECURITY" cweid="79"/>
-    <BugPattern type="XML_DECODER" abbrev="XMLDEC" category="SECURITY"/>
+    <BugPattern type="XML_DECODER" abbrev="XMLDEC" category="SECURITY" cweid="502"/>
     <BugPattern type="STATIC_IV" abbrev="STAIV" category="SECURITY" cweid="329"/>
     <BugPattern type="ECB_MODE" abbrev="SECECB" category="SECURITY" cweid="327"/>
     <BugPattern type="PADDING_ORACLE" abbrev="PADORA" category="SECURITY" cweid="326"/>
@@ -247,13 +255,14 @@
     <BugPattern type="EL_INJECTION" abbrev="SECEL" category="SECURITY" cweid="94"/>
     <BugPattern type="SEAM_LOG_INJECTION" abbrev="SECSEAM" category="SECURITY" cweid="94"/>
     <BugPattern type="OGNL_INJECTION" abbrev="SECOGNL" category="SECURITY" cweid="94"/>
+    <BugPattern type="GROOVY_SHELL" abbrev="SECGROSH" category="SECURITY" cweid="94"/>
     <BugPattern type="HTTP_RESPONSE_SPLITTING" abbrev="SECHRS" category="SECURITY" cweid="113"/>
     <BugPattern type="CRLF_INJECTION_LOGS" abbrev="SECCRLFLOG" category="SECURITY" cweid="117"/>
     <BugPattern type="EXTERNAL_CONFIG_CONTROL" abbrev="SECCONFCTRL" category="SECURITY" cweid="15"/>
     <BugPattern type="ANDROID_EXTERNAL_FILE_ACCESS" abbrev="SECEFA" category="SECURITY" cweid="276"/>
     <BugPattern type="ANDROID_BROADCAST" abbrev="SECBROAD" category="SECURITY" cweid="276"/>
     <BugPattern type="ANDROID_WORLD_WRITABLE" abbrev="SECWW" category="SECURITY" cweid="276"/>
-    <BugPattern type="ANDROID_GEOLOCATION" abbrev="SECGEO" category="SECURITY" CWE="359"/>
+    <BugPattern type="ANDROID_GEOLOCATION" abbrev="SECGEO" category="SECURITY" cweid="359"/>
     <BugPattern type="ANDROID_WEB_VIEW_JAVASCRIPT" abbrev="SECWVJ" category="SECURITY" cweid="79"/>
     <BugPattern type="ANDROID_WEB_VIEW_JAVASCRIPT_INTERFACE" abbrev="SECWVJI" category="SECURITY" cweid="285"/>
     <BugPattern type="OBJECT_DESERIALIZATION" abbrev="SECOBDES" category="SECURITY" cweid="502"/>
@@ -270,8 +279,12 @@
     <BugPattern type="URLCONNECTION_SSRF_FD" abbrev="SECSSSRFUC" category="SECURITY" cweid="918"/>
     <BugPattern type="INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE" abbrev="ERRMSG" category="SECURITY" cweid="209"/>
     <BugPattern type="RPC_ENABLED_EXTENSIONS" abbrev="RPCEXT" category="SECURITY"/>
-    <BugPattern type="WICKET_XSS1" abbrev="WICXSS1" category="SECURITY"/>
+    <BugPattern type="WICKET_XSS1" abbrev="WICXSS1" category="SECURITY" cweid="79"/>
     <BugPattern type="OVERLY_PERMISSIVE_FILE_PERMISSION" abbrev="SECOPFP" category="SECURITY"/>
+    <BugPattern type="IMPROPER_UNICODE" abbrev="SECUNI" category="SECURITY" cweid="176"/>
+    <BugPattern type="MODIFICATION_AFTER_VALIDATION" abbrev="SECMOD" category="SECURITY" cweid="176"/>
+    <BugPattern type="NORMALIZATION_AFTER_VALIDATION" abbrev="SECNORM" category="SECURITY" cweid="176"/>
+    <BugPattern type="DANGEROUS_PERMISSION_COMBINATION" abbrev="SECPERM" category="SECURITY" cweid="732"/>
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH" abbrev="SECUDOS" category="SECURITY"/>
     <BugPattern type="UNSAFE_DELETE_SECRET_AUTH_EXCEPTION_PATH" abbrev="SECUDOSE" category="SECURITY"/>
     <BugPattern type="USING_PASSWORD_GRANT_OAUTH" abbrev="SECISAUTH" category="SECURITY"/>
